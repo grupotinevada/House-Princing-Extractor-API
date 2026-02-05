@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>House Pricing API - Documentación Técnica</title>
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --bg-dark: #0f172a;
+            --bg-panel: #1e293b;
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --code-bg: #0d1117;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            line-height: 1.6;
+            display: flex;
+        }
+
+        /* Sidebar Navigation */
+        nav {
+            width: 260px;
+            height: 100vh;
+            background-color: var(--bg-panel);
+            border-right: 1px solid var(--border);
+            position: fixed;
+            overflow-y: auto;
+            padding: 2rem 1rem;
+        }
+
+        nav h3 {
+            color: var(--primary);
+            font-size: 1.2rem;
+            margin-bottom: 1.5rem;
+            padding-left: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        nav ul {
+            list-style: none;
+        }
+
+        nav li {
+            margin-bottom: 0.5rem;
+        }
+
+        nav a {
+            display: block;
+            color: var(--text-muted);
+            text-decoration: none;
+            padding: 0.5rem 10px;
+            border-radius: 6px;
+            transition: all 0.2s;
+            font-size: 0.95rem;
+        }
+
+        nav a:hover {
+            background-color: var(--border);
+            color: #fff;
+        }
+
+        /* Main Content */
+        main {
+            margin-left: 260px;
+            padding: 3rem 4rem;
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        h1,
+        h2,
+        h3 {
+            color: #fff;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1rem;
+            margin-top: 0;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            color: var(--primary);
+            margin-top: 3rem;
+        }
+
+        h3 {
+            font-size: 1.3rem;
+            margin-top: 1.5rem;
+        }
+
+        p {
+            margin-bottom: 1rem;
+            color: var(--text-muted);
+        }
+
+        ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1.5rem;
+            color: var(--text-muted);
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Code Blocks */
+        pre {
+            background-color: var(--code-bg);
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            margin-bottom: 1.5rem;
+        }
+
+        code {
+            font-family: 'Consolas', 'Monaco', monospace;
+            color: #a5d6ff;
+            font-size: 0.9rem;
+        }
+
+        .inline-code {
+            background-color: rgba(59, 130, 246, 0.1);
+            color: var(--primary);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+
+        /* Badges & Tables */
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .badge-get {
+            background: #059669;
+            color: white;
+        }
+
+        .badge-post {
+            background: #2563eb;
+            color: white;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 2rem;
+            background-color: var(--bg-panel);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        th,
+        td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            background-color: var(--code-bg);
+            color: var(--primary);
+        }
+
+        .note {
+            background-color: rgba(234, 179, 8, 0.1);
+            border-left: 4px solid #eab308;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            color: #e2e8f0;
+        }
+
+        /* Diagrams */
+        .diagram {
+            background: var(--bg-panel);
+            padding: 2rem;
+            border-radius: 8px;
+            text-align: center;
+            font-family: monospace;
+            margin-bottom: 2rem;
+            white-space: pre;
+            overflow-x: auto;
+            color: #fff;
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav>
+        <h3>House Pricing API</h3>
+        <ul>
+            <li><a href="#intro">1. Introducción</a></li>
+            <li><a href="#architecture">2. Arquitectura</a></li>
+            <li><a href="#structure">3. Estructura de Archivos</a></li>
+            <li><a href="#prerequisites">4. Requisitos Linux</a></li>
+            <li><a href="#installation">5. Instalación</a></li>
+            <li><a href="#pipeline">6. Pipeline de Lógica</a></li>
+            <li><a href="#api-ref">7. Referencia API</a></li>
+            <li><a href="#frontend">8. Integración PHP</a></li>
+        </ul>
+    </nav>
+
+    <main>
+        <section id="intro">
+            <h1>Documentación Técnica</h1>
+            <p>
+                <strong>House Pricing Automation API</strong> es una solución desacoplada diseñada para procesar
+                masivamente tasaciones inmobiliarias.
+                Separa la interfaz de usuario (PHP) del procesamiento pesado (Python/Selenium) para evitar
+                <em>timeouts</em> y problemas de concurrencia.
+            </p>
+            <p>
+                El sistema permite subir un Excel con roles y comunas, y devuelve un reporte enriquecido con datos de
+                "Informe de Antecedentes" (PDF OCR) y comparables de mercado (Web Scraping).
+            </p>
+        </section>
+
+        <section id="architecture">
+            <h2>2. Arquitectura del Sistema</h2>
+            <p>El sistema sigue un patrón <strong>Cliente-Servidor Asíncrono</strong> con gestión de estado en memoria.
+            </p>
+
+            <div class="diagram">
+                +----------------+ +--------------------+ +-------------------------+
+                | CLIENTE (PHP) | ---> | API (FastAPI) | ---> | WORKER (Lógica) |
+                | (Interfaz UI) | <--- | (Gestor de Cola) | <--- | (Selenium/PDF/Pandas) | +----------------+
+                    +--------------------+ +-------------------------+ | | | 1. Sube Archivo 2. Genera UUID Task 3.
+                    Ejecuta Paso 0 4. Polling Estado <------ 5. Lee Estado Memoria 6. Callbacks Progreso 7. Descarga
+                    Final 8. Sirve Archivo 9. Genera Excel </div>
+
+                    <ul>
+                        <li><strong>PHP (Frontend):</strong> Solo maneja la UI y peticiones HTTP. No procesa datos.</li>
+                        <li><strong>FastAPI (Backend):</strong> Orquestador. Recibe archivos y lanza hilos en
+                            <code>BackgroundTasks</code>.</li>
+                        <li><strong>Pipeline (Core):</strong> Scripts de Python puros que ejecutan la lógica de negocio
+                            "sagrada".</li>
+                    </ul>
+        </section>
+
+        <section id="structure">
+            <h2>3. Estructura de Archivos</h2>
+            <pre><code>/proyecto_root/
+│
+├── server.py              # Entry Point de la API (Uvicorn)
+├── requirements.txt       # Dependencias de Python
+├── .env                   # Variables de entorno (Credenciales)
+├── logger.py              # Configuración de Logs rotativos
+│
+├── api/                   # Módulo de Lógica de Negocio
+│   ├── __init__.py        # Permite importar la carpeta como paquete
+│   ├── main_hp.py         # Orquestador del Pipeline (Llama a los Pasos)
+│   ├── paso0_hp.py        # Descargas (Selenium)
+│   ├── paso1_hp.py        # Extracción PDF (OCR/Text)
+│   ├── paso2_hp.py        # Comparables (Selenium Heavy)
+│   └── paso3_hp.py        # Generación Excel (Pandas)
+│
+├── uploads/               # Input temporal (Archivos subidos)
+├── house_pricing_outputs/ # Output final (Excels generados)
+└── logs/                  # Logs del sistema</code></pre>
+        </section>
+
+        <section id="prerequisites">
+            <h2>4. Requisitos del Servidor (Linux)</h2>
+            <p>El sistema está optimizado para <strong>Ubuntu 20.04+</strong> o <strong>Fedora 38+</strong>.</p>
+
+            <h3>Componentes Base</h3>
+            <ul>
+                <li><strong>Python 3.10+</strong></li>
+                <li><strong>Google Chrome Stable:</strong> Necesario para Selenium.</li>
+                <li><strong>Permisos:</strong> El usuario que ejecute el script debe poder crear carpetas.</li>
+            </ul>
+
+            <div class="note">
+                <strong>Nota sobre Drivers:</strong> No es necesario descargar <code>chromedriver</code> manualmente.
+                Selenium 4.10+ usa <em>Selenium Manager</em> para descargarlo automáticamente según la versión de Chrome
+                instalada.
+            </div>
+        </section>
+
+        <section id="installation">
+            <h2>5. Guía de Instalación</h2>
+
+            <h3>Paso 1: Instalar Google Chrome</h3>
+            <pre><code># Ubuntu / Debian
+wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+sudo apt install ./google-chrome-stable_current_amd64.deb
+
+# Fedora / CentOS
+sudo dnf install google-chrome-stable</code></pre>
+
+            <h3>Paso 2: Configurar Entorno Python</h3>
+            <pre><code># Clonar o copiar archivos
+cd /ruta/a/tu/proyecto
+
+# Crear entorno virtual (Recomendado)
+python3 -m venv venv
+source venv/bin/activate
+
+# Instalar dependencias
+pip install -r requirements.txt</code></pre>
+
+            <h3>Paso 3: Ejecutar la API</h3>
+            <pre><code># Ejecución directa (Desarrollo)
+python server.py
+
+# Ejecución Producción (Segundo plano)
+nohup python server.py > /dev/null 2>&1 &</code></pre>
+            <p>La API iniciará en el puerto <strong>3000</strong>.</p>
+        </section>
+
+        <section id="pipeline">
+            <h2>6. Pipeline de Lógica (Core)</h2>
+            <p>El núcleo del sistema reside en la carpeta <code>api/</code>. La lógica original se mantiene intacta,
+                pero se le han inyectado <strong>callbacks</strong> para reportar progreso.</p>
+
+            <ul>
+                <li>
+                    <strong>Paso 0 (Descargas):</strong>
+                    Usa Selenium para descargar PDFs desde el portal de antecedentes.
+                    <br><em>Clave:</em> Manejo robusto de reintentos al mover archivos descargados.
+                </li>
+                <li>
+                    <strong>Paso 1 (PDF Parsing):</strong>
+                    Usa <code>pdfplumber</code>. Extrae roles, avaluos y coordenadas espaciales de los hipervínculos del
+                    PDF.
+                </li>
+                <li>
+                    <strong>Paso 2 (Enriquecimiento):</strong>
+                    La etapa más pesada. Usa <code>ThreadPoolExecutor</code> y Selenium para buscar comparables en
+                    HousePricing.
+                    <br><em>Importante:</em> Implementa un contador de progreso <code>thread-safe</code>.
+                </li>
+                <li>
+                    <strong>Paso 3 (Reporte):</strong>
+                    Cruza toda la data (JSON) y genera un Excel con 5 hojas relacionales. Usa <code>openpyxl</code> para
+                    formateo.
+                </li>
+            </ul>
+        </section>
+
+        <section id="api-ref">
+            <h2>7. Referencia de API</h2>
+            <p>Endpoints disponibles en <code>http://TU_IP:3000</code>.</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Método</th>
+                        <th>Endpoint</th>
+                        <th>Descripción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="badge badge-get">GET</span></td>
+                        <td><code>/health</code></td>
+                        <td>Verifica que el sistema esté operativo.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge badge-post">POST</span></td>
+                        <td><code>/upload-process</code></td>
+                        <td>
+                            Sube archivo Input. Retorna <code>{"task_id": "uuid"}</code>.
+                            <br><small>Param: file (Binary)</small>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge badge-get">GET</span></td>
+                        <td><code>/status/{task_id}</code></td>
+                        <td>
+                            Polling de estado. Retorna <code>progress</code> (0-100) y <code>status</code>.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge badge-post">POST</span></td>
+                        <td><code>/cancel/{task_id}</code></td>
+                        <td>Envía señal de interrupción (Event Set) al proceso.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge badge-get">GET</span></td>
+                        <td><code>/download/{task_id}</code></td>
+                        <td>Descarga el Excel final (Solo si status == "completed").</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section id="frontend">
+            <h2>8. Integración Frontend (PHP)</h2>
+            <p>El archivo <code>index.php</code> contiene la lógica de cliente. Como la arquitectura separa el servidor
+                Web del servidor de Procesamiento, se debe configurar la IP manualmente.</p>
+
+            <h3>Configuración Crítica</h3>
+            <p>Editar la línea dentro del bloque <code>&lt;script&gt;</code> en <code>index.php</code>:</p>
+            <pre><code>// index.php
+
+// REEMPLAZAR con la IP real donde corre server.py
+const API_URL = "http://192.168.1.50:3000"; 
+
+// NO usar 'localhost' si el PHP y Python están en servidores distintos
+// o si se accede desde otra máquina de la red.</code></pre>
+        </section>
+
+    </main>
+
+</body>
+
+</html>

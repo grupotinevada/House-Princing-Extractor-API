@@ -1,0 +1,121 @@
+CREATE DATABASE IF NOT EXISTS house_pricing_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE house_pricing_db;
+
+-- ---------------------------------------------------------
+-- TABLA MAESTRA: PROPIEDADES
+-- Almacena la información general 
+-- ---------------------------------------------------------
+CREATE TABLE IF NOT EXISTS propiedades (
+    id VARCHAR(36) NOT NULL, -- UUID generado en Python
+    rol_sii VARCHAR(50) NOT NULL,
+    comuna VARCHAR(100) NOT NULL,
+    direccion VARCHAR(255),
+    propietario VARCHAR(255),
+    
+    -- Características Físicas
+    tipo_propiedad VARCHAR(100),
+    destino_sii VARCHAR(100),
+    m2_construido DECIMAL(10,2),
+    m2_terreno DECIMAL(10,2),
+    
+    -- Información Financiera (Avalúo)
+    avaluo_total BIGINT,
+    avaluo_exento BIGINT,
+    avaluo_afecto BIGINT,
+    contribuciones_semestrales BIGINT,
+    
+    -- Datos de Transacción (CBR)
+    cbr_foja VARCHAR(50),
+    cbr_numero VARCHAR(50),
+    cbr_anio INT,
+    fecha_transaccion DATE,
+    monto_transaccion BIGINT,
+    vendedores TEXT, -- listas separadas por coma
+    compradores TEXT,
+    
+    -- Metadatos del Proceso
+    nombre_archivo_origen VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    PRIMARY KEY (id),
+    INDEX idx_rol_comuna (rol_sii, comuna)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ---------------------------------------------------------
+-- TABLA: CONSTRUCCIONES (Relación 1:N)
+-- Detalle de las líneas de construcción 
+-- ---------------------------------------------------------
+CREATE TABLE IF NOT EXISTS construcciones (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    propiedad_id VARCHAR(36) NOT NULL,
+    
+    numero_linea INT,
+    material VARCHAR(100),
+    calidad VARCHAR(50),
+    anio_construccion INT,
+    m2 DECIMAL(10,2),
+    destino VARCHAR(100),
+    
+    FOREIGN KEY (propiedad_id) REFERENCES propiedades(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ---------------------------------------------------------
+-- TABLA: ROLES ASOCIADOS (Relación 1:N)
+-- Roles vinculados (Bodegas, Estacionamientos) 
+-- ---------------------------------------------------------
+CREATE TABLE IF NOT EXISTS roles_asociados (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    propiedad_id VARCHAR(36) NOT NULL,
+    
+    rol_asociado VARCHAR(50),
+    tipo_ubicacion VARCHAR(150), 
+    monto_deuda BIGINT DEFAULT 0,
+    link_deuda TEXT,
+    
+    FOREIGN KEY (propiedad_id) REFERENCES propiedades(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ---------------------------------------------------------
+-- TABLA: DEUDAS TGR (Relación 1:N)
+-- Deudas detectadas (Rol Principal o de la propiedad) 
+-- ---------------------------------------------------------
+CREATE TABLE IF NOT EXISTS deudas_tgr (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    propiedad_id VARCHAR(36) NOT NULL,
+    
+    rol_deuda VARCHAR(50),
+    monto BIGINT,
+    link_tgr TEXT,
+    
+    FOREIGN KEY (propiedad_id) REFERENCES propiedades(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ---------------------------------------------------------
+-- TABLA: COMPARABLES MERCADO (Relación 1:N)
+-- Datos extraídos de House Pricing 
+-- ---------------------------------------------------------
+CREATE TABLE IF NOT EXISTS comparables (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    propiedad_id VARCHAR(36) NOT NULL,
+    
+    fuente VARCHAR(50), -- "Compraventas" u "Ofertas"
+    rol_comparable VARCHAR(50),
+    direccion VARCHAR(255),
+    comuna VARCHAR(100),
+    
+    precio_uf DECIMAL(12,2),
+    uf_m2 DECIMAL(10,2),
+    
+    fecha_transaccion DATE, 
+    anio_construccion INT,
+    m2_util DECIMAL(10,2),
+    m2_total DECIMAL(10,2),
+    dormitorios INT,
+    banios INT,
+    
+    distancia_metros INT,
+    link_mapa TEXT,
+    link_publicacion TEXT,
+    
+    FOREIGN KEY (propiedad_id) REFERENCES propiedades(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
