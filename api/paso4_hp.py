@@ -110,6 +110,7 @@ def insertar_datos(lista_datos: List[Dict[str, Any]], cancel_event, callback_pro
 
     cursor = conn.cursor()
     total = len(lista_datos)
+    logger.info(f"📊 Total de propiedades a procesar: {total}")
     
     try:
         for idx, item in enumerate(lista_datos):
@@ -127,25 +128,36 @@ def insertar_datos(lista_datos: List[Dict[str, Any]], cancel_event, callback_pro
             cbr = item.get("informacion_cbr", {})
             meta = item.get("meta_archivo", {})
             
+            rol_actual = gral.get("rol", "S/R")
+            logger.info(f"👉 [{idx+1}/{total}] Procesando UID: {uid} | Rol: {rol_actual}")
+
             vend_str = ", ".join(trans.get("vendedores", [])) if trans.get("vendedores") else None
             comp_str = ", ".join(trans.get("compradores", [])) if trans.get("compradores") else None
+            
+            # Debug de datos críticos antes de insertar
+            link_debug = meta.get("link_informe")
+            logger.debug(f"     🔍 Metadata: Archivo='{meta.get('nombre')}' | Link Informe={'✅ Presente' if link_debug else '❌ NULL'}")
 
-            # --- 2. QUERY MAESTRA (PROPIEDADES) ---
+            # --- 2. QUERY  (PROPIEDADES) ---
             
             # Limpiezas críticas
             fecha_tx_clean = convertir_fecha_mysql(trans.get("fecha"))
-            monto_tx_clean = limpiar_monto_entero(trans.get("monto")) # <--- APLICADO AQUÍ
+            monto_tx_clean = limpiar_monto_entero(trans.get("monto")) 
 
+            # Se agregan link_informe + las columnas de tasación
             sql_propiedad = """
                 INSERT INTO propiedades (
                     id, rol_sii, comuna, direccion, propietario,
                     tipo_propiedad, destino_sii, m2_construido, m2_terreno,
                     avaluo_total, avaluo_exento, avaluo_afecto, contribuciones_semestrales,
                     cbr_foja, cbr_numero, cbr_anio, fecha_transaccion, monto_transaccion,
-                    vendedores, compradores, nombre_archivo_origen
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+                    vendedores, compradores, nombre_archivo_origen,
+                    link_informe,
+                    tasa_vta_clp, tasa_vta_uf, tasa_arr_clp, tasa_arr_uf
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
             """
             
+            # Se agrega el valor de link_informe y None para los 4 campos de tasación
             valores_propiedad = (
                 uid, gral.get("rol"), gral.get("comuna"), gral.get("direccion"), gral.get("propietario"),
                 carac.get("Tipo"), carac.get("Destino"), 
@@ -155,39 +167,54 @@ def insertar_datos(lista_datos: List[Dict[str, Any]], cancel_event, callback_pro
                 avaluo.get("Avalúo Afecto"), avaluo.get("Contribuciones Semestrales"),
                 cbr.get("Foja"), cbr.get("Número"), cbr.get("Año"), 
                 fecha_tx_clean,
-                monto_tx_clean, # <--- Valor limpio (int)
-                vend_str, comp_str, meta.get("nombre")
+                monto_tx_clean, 
+                vend_str, comp_str, meta.get("nombre"),
+                meta.get("link_informe"), # <--- Inserción del Link
+                None, None, None, None    # <--- Campos Tasación (Placeholder)
             )
             
             cursor.execute(sql_propiedad, valores_propiedad)
+            logger.debug(f"     ✅ Tabla 'propiedades' insertada correctamente.")
 
             # --- 3. CONSTRUCCIONES ---
-            for c in item.get("construcciones", []):
-                sql_cons = """
-                    INSERT INTO construcciones (propiedad_id, numero_linea, material, calidad, anio_construccion, m2, destino)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)
-                """
-                cursor.execute(sql_cons, (
-                    uid, c.get("nro"), c.get("material"), c.get("calidad"), 
-                    c.get("anio"), 
-                    limpiar_decimal_chile(c.get("m2")), 
-                    c.get("destino")
-                ))
+            lista_cons = item.get("construcciones", [])
+            if lista_cons:
+                logger.debug(f"     🏗️ Insertando {len(lista_cons)} registros en 'construcciones'...")
+                for c in lista_cons:
+                    sql_cons = """
+                        INSERT INTO construcciones (propiedad_id, numero_linea, material, calidad, anio_construccion, m2, destino)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    """
+                    cursor.execute(sql_cons, (
+                        uid, c.get("nro"), c.get("material"), c.get("calidad"), 
+                        c.get("anio"), 
+                        limpiar_decimal_chile(c.get("m2")), 
+                        c.get("destino")
+                    ))
+            else:
+                logger.debug("     ⚪ Sin construcciones para insertar.")
 
             # --- 4. ROLES ASOCIADOS ---
+            lista_roles = item.get("roles_cbr", [])
             mapa_deudas = {str(d.get("rol", "")).upper().strip(): d for d in item.get("deudas", [])}
-            for r in item.get("roles_cbr", []):
-                key = str(r.get("rol", "")).upper().strip()
-                deuda_obj = mapa_deudas.get(key, {})
-                
-                sql_roles = """
-                    INSERT INTO roles_asociados (propiedad_id, rol_asociado, tipo_ubicacion, monto_deuda, link_deuda)
-                    VALUES (%s, %s, %s, %s, %s)
-                """
-                cursor.execute(sql_roles, (uid, r.get("rol"), r.get("tipo"), deuda_obj.get("monto", 0), deuda_obj.get("link_tgr")))
+            
+            if lista_roles:
+                logger.debug(f"     🔗 Insertando {len(lista_roles)} registros en 'roles_asociados'...")
+                for r in lista_roles:
+                    key = str(r.get("rol", "")).upper().strip()
+                    deuda_obj = mapa_deudas.get(key, {})
+                    
+                    sql_roles = """
+                        INSERT INTO roles_asociados (propiedad_id, rol_asociado, tipo_ubicacion, monto_deuda, link_deuda)
+                        VALUES (%s, %s, %s, %s, %s)
+                    """
+                    cursor.execute(sql_roles, (uid, r.get("rol"), r.get("tipo"), deuda_obj.get("monto", 0), deuda_obj.get("link_tgr")))
+            else:
+                logger.debug("     ⚪ Sin roles asociados extra.")
 
             # --- 5. DEUDAS (SOLO ROL PRINCIPAL) ---
             rol_princ_key = str(gral.get("rol", "")).upper().strip()
+            deudas_insertadas = 0
             for d in item.get("deudas", []):
                 if rol_princ_key in str(d.get("rol", "")).upper().strip():
                     sql_deuda = """
@@ -195,22 +222,25 @@ def insertar_datos(lista_datos: List[Dict[str, Any]], cancel_event, callback_pro
                         VALUES (%s, %s, %s, %s)
                     """
                     cursor.execute(sql_deuda, (uid, d.get("rol"), d.get("monto"), d.get("link_tgr")))
+                    deudas_insertadas += 1
+            
+            if deudas_insertadas > 0:
+                logger.debug(f"     💰 Insertada deuda TGR para rol principal.")
 
             # --- 6. COMPARABLES ---
-# --- 6. COMPARABLES (DEBUGGING EXTENDIDO) ---
             hp_data = item.get("house_pricing", {})
-            raw_comps = hp_data.get("comparables") # Extraemos la variable cruda
+            raw_comps = hp_data.get("comparables") 
 
-            # LOGS CHIVATOS: Para ver qué demonios está llegando
+            
             if raw_comps is None:
-                logger.warning(f"   ⚠️ [DEBUG] No existe la llave 'comparables' para la propiedad {uid}")
+                logger.warning(f"     ⚠️ [DEBUG] No existe la llave 'comparables' para la propiedad {uid}")
             elif isinstance(raw_comps, str):
-                logger.warning(f"   ⚠️ [DEBUG] 'comparables' es un texto (posible error de scraping): {raw_comps}")
+                logger.warning(f"     ⚠️ [DEBUG] 'comparables' es un texto (posible error de scraping): {raw_comps}")
             elif isinstance(raw_comps, list):
                 if len(raw_comps) == 0:
-                    logger.warning(f"   ⚠️ [DEBUG] La lista de comparables está vacía [] para {uid}")
+                    logger.warning(f"     ⚠️ [DEBUG] La lista de comparables está vacía [] para {uid}")
                 else:
-                    logger.info(f"   👀 [DEBUG] Se encontraron {len(raw_comps)} comparables. Intentando insertar...")
+                    logger.info(f"     👀 [DEBUG] Se encontraron {len(raw_comps)} comparables. Insertando...")
                     
                     for i, comp in enumerate(raw_comps):
                         try:
@@ -241,9 +271,9 @@ def insertar_datos(lista_datos: List[Dict[str, Any]], cancel_event, callback_pro
                             )
                             cursor.execute(sql_comp, vals_comp)
                         except Error as e_comp:
-                             logger.error(f"   ❌ [DEBUG] Error insertando comparable #{i+1}: {e_comp}")
+                             logger.error(f"     ❌ [DEBUG] Error insertando comparable #{i+1}: {e_comp}")
             else:
-                 logger.error(f"   ❌ [DEBUG] Tipo de dato inesperado en 'comparables': {type(raw_comps)}")
+                 logger.error(f"     ❌ [DEBUG] Tipo de dato inesperado en 'comparables': {type(raw_comps)}")
             
             if callback_progreso:
                 callback_progreso(idx + 1, total)

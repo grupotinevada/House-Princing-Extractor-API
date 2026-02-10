@@ -168,6 +168,8 @@ def _iniciar_sesion_hp(driver, wait):
 # 3. LÓGICA DE DESCARGA (SOLO MODIFICADO EL GUARDADO FINAL)
 # ==============================================================================
 def _descargar_pdf_individual(driver, wait, item, carpeta_temporal):
+    import json 
+    
     rol = item['rol']
     comuna = item['comuna']
     
@@ -222,6 +224,12 @@ def _descargar_pdf_individual(driver, wait, item, carpeta_temporal):
         wait_descarga = WebDriverWait(driver, 150) 
         
         btn_descarga = wait_descarga.until(EC.element_to_be_clickable((By.XPATH, xpath_download)))
+        
+        # --- NUEVO: CAPTURA DEL LINK ---
+        link_informe = btn_descarga.get_attribute("href")
+        logger.debug(f"   🔗 Link detectado: {link_informe}")
+        # -------------------------------
+
         logger.debug(f" CLICK DESCARGAR")        
         # Limpieza previa
         for f in glob.glob(os.path.join(carpeta_temporal, "*")):
@@ -246,6 +254,17 @@ def _descargar_pdf_individual(driver, wait, item, carpeta_temporal):
                 logger.debug(f" Reintentos en mover el archivo: {intento + 1}")
                 try:
                     shutil.move(archivo, nombre_final)
+                    
+                    # Guardamos un pequeño JSON con el mismo nombre pero extensión .json
+                    ruta_meta = nombre_final + ".json"
+                    meta_data = {
+                        "link_informe": link_informe,
+                        "rol_origen": rol,        # <--- Para validar luego
+                        "comuna_origen": comuna
+                    }
+                    with open(ruta_meta, "w", encoding="utf-8") as f:
+                        json.dump(meta_data, f)
+
                     movido = True
                     break
                 except PermissionError:
@@ -268,7 +287,7 @@ def _descargar_pdf_individual(driver, wait, item, carpeta_temporal):
         return False
 
 # ==============================================================================
-# NUEVO: WORKER (NUEVA FUNCIÓN, NO EXISTÍA, NECESARIA PARA THREADS)
+#  WORKER = Basicamente el numero de navegadores que se abren al mismo tiempo
 # ==============================================================================
 def procesar_lote_worker(id_worker, sublista_propiedades, cancel_event):
     carpeta_worker = os.path.join(OUTPUT_FOLDER, f"temp_{id_worker}")

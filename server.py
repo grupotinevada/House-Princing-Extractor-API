@@ -10,17 +10,24 @@ import uuid
 import sys
 import threading
 import glob
-from typing import Dict, Optional
+from typing import Dict, Optional,List
 from fastapi import FastAPI, UploadFile, File, BackgroundTasks, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 import mysql.connector
 from dotenv import load_dotenv
+from pydantic import BaseModel
 
 # --- 1. CONFIGURACIÓN DE RUTAS E IMPORTS ---
 # Definimos la Raíz del Proyecto (Donde está este archivo server.py)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 load_dotenv()
+
+
+class PropiedadRequest(BaseModel):
+    rol: str
+    comuna: str
+    direccion: Optional[str] = None
 
 def get_db_connection():
     try:
@@ -207,6 +214,52 @@ async def upload_and_process(file: UploadFile = File(...), background_tasks: Bac
         "message": "Archivo recibido. Proceso iniciado."
     }
 
+@app.post("/process-json")
+async def process_json_data(
+    data: List[PropiedadRequest], 
+    background_tasks: BackgroundTasks
+):
+    """
+    Recibe un listado de propiedades en formato JSON y lanza el proceso.
+    Ejemplo: [{"rol": "123-4", "comuna": "SANTIAGO"}]
+    """
+    if not data:
+        raise HTTPException(status_code=400, detail="La lista de propiedades no puede estar vacía.")
+
+    # 1. Generar ID de tarea
+    task_id = str(uuid.uuid4())
+    
+    # 2. Convertir JSON a un CSV temporal para que main_hp lo pueda leer
+    # Usamos CSV con separador ';' para mantener compatibilidad con paso0_hp.py
+    file_location = os.path.join(UPLOAD_DIR, f"{task_id}_data.csv")
+    
+    try:
+        import pandas as pd
+        # Convertimos la lista de modelos Pydantic a una lista de diccionarios
+        df = pd.DataFrame([item.model_dump() for item in data])
+        df.to_csv(file_location, index=False, sep=';', encoding='utf-8')
+    except Exception as e:
+        logger.error(f"Error creando archivo temporal desde JSON: {e}")
+        raise HTTPException(status_code=500, detail="Error interno al procesar los datos.")
+
+    # 3. Inicializar estado en memoria
+    tasks[task_id] = {
+        "status": "queued",
+        "progress": 0,
+        "message": "Datos JSON recibidos. En cola...",
+        "filename": "Entrada_JSON.json",
+        "cancel_event": None
+    }
+
+    # 4. Encolar la misma función de background que usa el upload
+    background_tasks.add_task(ejecutar_proceso_background, task_id, file_location)
+
+    return {
+        "task_id": task_id, 
+        "status": "queued", 
+        "message": "Datos recibidos correctamente. Proceso iniciado."
+    }
+    
 @app.get("/status/{task_id}")
 def get_status(task_id: str):
     """

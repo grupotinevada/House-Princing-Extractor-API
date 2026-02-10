@@ -69,6 +69,7 @@ def generar_excel(lista_datos, cancel_event, nombre_archivo="reporte_final.xlsx"
         fila_main = {
             "ID Interno": uid,
             "Archivo Origen": item.get("meta_archivo", {}).get("nombre"),
+            "link informe": item.get("meta_archivo", {}).get("link_informe"),
             
             # Identificación
             "Rol SII": info_gral.get("rol"),

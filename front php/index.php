@@ -68,6 +68,11 @@
                         <i class="bi bi-database"></i> Visualizador BD
                     </button>
                 </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="manual-tab" data-bs-toggle="tab" data-bs-target="#panel-manual" type="button" role="tab">
+                        <i class="bi bi-list-check"></i> Selección Manual
+                    </button>
+                </li>
             </ul>
 
             <div class="tab-content" id="myTabContent">
@@ -152,6 +157,44 @@
                         </div>
                     </div>
                 </div>
+                <div class="tab-pane fade" id="panel-manual" role="tabpanel">
+    <h6 class="fw-bold mb-3"><i class="bi bi-1-circle"></i> Seleccionar Propiedades de Prueba</h6>
+    <div class="table-responsive border rounded bg-white">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th style="width: 40px;"><input type="checkbox" id="check-all" onclick="toggleAllChecks(this)"></th>
+                    <th>Rol</th>
+                    <th>Comuna</th>
+                    <th>Dirección</th>
+                </tr>
+            </thead>
+            <tbody id="lista-manual-body">
+                <tr>
+                    <td><input type="checkbox" class="prop-check" data-rol="3906-209" data-comuna="La Serena" data-dir="AV CENTRAL EDIF 1 5000 DP 1104"></td>
+                    <td>3906-209</td><td>La Serena</td><td>AV CENTRAL EDIF 1 5000 DP 1104</td>
+                </tr>
+                <tr>
+                    <td><input type="checkbox" class="prop-check" data-rol="9064-112" data-comuna="Macul" data-dir="AV. A. VESPUCIO 4455 DP 1109 D"></td>
+                    <td>9064-112</td><td>Macul</td><td>AV. A. VESPUCIO 4455 DP 1109 D</td>
+                </tr>
+                <tr>
+                    <td><input type="checkbox" class="prop-check" data-rol="4560-16" data-comuna="Temuco" data-dir="Las Marantas 02361"></td>
+                    <td>4560-16</td><td>Temuco</td><td>Las Marantas 02361</td>
+                </tr>
+                <tr>
+                    <td><input type="checkbox" class="prop-check" data-rol="1825-145" data-comuna="Providencia" data-dir="Dario Urzua 1963"></td>
+                    <td>1825-145</td><td>Providencia</td><td>Dario Urzua 1963</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="mt-3">
+        <button class="btn btn-primary" onclick="iniciarProcesoManual()">
+            <i class="bi bi-play-circle"></i> Procesar Seleccionados
+        </button>
+    </div>
+</div>
 
             </div> </div>
     </div>
@@ -411,6 +454,52 @@
             document.getElementById('loader-tabla').classList.add('d-none');
         }
     }
+    function toggleAllChecks(source) {
+    const checkboxes = document.querySelectorAll('.prop-check');
+    checkboxes.forEach(cb => cb.checked = source.checked);
+}
+
+async function iniciarProcesoManual() {
+    const selected = [];
+    document.querySelectorAll('.prop-check:checked').forEach(cb => {
+        selected.push({
+            rol: cb.dataset.rol,
+            comuna: cb.dataset.comuna,
+            direccion: cb.dataset.dir
+        });
+    });
+
+    if (selected.length === 0) {
+        alert("Por favor selecciona al menos una propiedad.");
+        return;
+    }
+
+    log(`Iniciando proceso manual con ${selected.length} propiedades...`, "info");
+    
+    // Cambiar visualmente al tab de procesamiento para ver los logs y progreso
+    const triggerEl = document.querySelector('#proceso-tab');
+    bootstrap.Tab.getInstance(triggerEl).show();
+
+    try {
+        const res = await fetch(`${API_URL}/process-json`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(selected)
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+            currentTaskId = data.task_id;
+            document.getElementById('btn-cancel').disabled = false;
+            pollInterval = setInterval(checkStatus, 2000);
+            log(`Tarea manual iniciada: ${currentTaskId}`, "success");
+        } else {
+            log(`Error: ${data.detail}`, "error");
+        }
+    } catch (e) {
+        log(`Error de red: ${e.message}`, "error");
+    }
+}
 
 </script>
 

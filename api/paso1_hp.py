@@ -11,6 +11,7 @@ from typing import Dict, Any, List, Optional
 import pdfplumber
 
 from logger import get_logger
+import json 
 
 logger = get_logger("paso1_hp", log_dir="logs", log_file="paso1_hp.log")
 
@@ -37,6 +38,35 @@ def clean_float(text: str) -> float:
 def clean_text(text: str) -> str:
     if not text: return ""
     return re.sub(r'\s+', ' ', text).strip()
+
+def limpiar_dato_si(text: str) -> Any:
+    """
+    Limpia basura del PDF (LaTeX/OCR) y maneja el S/I.
+    Ej: "$1(S/l)$" -> 1 (int)
+    Ej: "S/I" -> None
+    """
+    if not text: return None
+    
+    # 1. Limpieza de basura visual ($ y backslash) y espacios
+    s = str(text).replace('$', '').replace('\\', '').strip()
+    
+    # 2. Regex para borrar "S/I", "S/l", "(S/I)" ignorando mayúsculas y variantes OCR
+    s = re.sub(r'\(?S/[Il1\|]\)?', '', s, flags=re.IGNORECASE).strip()
+    
+    # 3. Si quedó vacío (era solo S/I), retornamos None
+    if not s:
+        return None
+        
+    # 4. Intentamos convertir a número si quedó algo (ej: "1")
+    try:
+        # Reemplazar coma por punto por si viene decimal
+        s_num = s.replace(',', '.')
+        if '.' in s_num:
+            return float(s_num)
+        return int(s_num)
+    except:
+        # Si no es número (ej: "Habitacional"), devolvemos el texto limpio
+        return s
 
 # --- NUEVO: Helper de Coordenadas (CORREGIDO "JUSTO DEBAJO") ---
 def map_roles_to_links(pdf_obj) -> Dict[str, str]:
@@ -216,9 +246,10 @@ def parse_house_pricing_text(full_text: str, link_map: Dict[str, str] = {}) -> D
 
                 for idx, rol_val in enumerate(valid_roles):
                     t_val = valid_types[idx] if idx < len(valid_types) else "S/I"
+                    tipo_limpio = limpiar_dato_si(t_val)
                     data["roles_cbr"].append({
                         "rol": rol_val,
-                        "tipo": t_val
+                        "tipo": tipo_limpio
                     })
                 logger.info(f"   📚 Roles CBR extraídos: {len(data['roles_cbr'])}")
 
@@ -260,7 +291,7 @@ def parse_house_pricing_text(full_text: str, link_map: Dict[str, str] = {}) -> D
             if "M2" in key:
                 data["caracteristicas"][key] = clean_float(val)
             else:
-                data["caracteristicas"][key] = clean_text(val)
+                data["caracteristicas"][key] = limpiar_dato_si(val)
     
     # Ajuste M2
     if data["caracteristicas"].get("M2 Terreno", 0.0) == 0.0:
@@ -333,8 +364,12 @@ def parse_house_pricing_text(full_text: str, link_map: Dict[str, str] = {}) -> D
     
     for key, pat in patterns_cbr.items():
         match = re.search(pat, full_text)
-        if match:
-            data["informacion_cbr"][key] = match.group(1).strip()
+        val = match.group(1).strip()
+        if key == "Año":
+            # Limpieza específica para año S/I
+            data["informacion_cbr"][key] = limpiar_dato_si(val)
+        else:
+            data["informacion_cbr"][key] = val  
 
     return data
 
@@ -356,11 +391,10 @@ def procesar_lote_pdfs(carpeta_entrada: str, cancel_event, callback_progreso=Non
         if cancel_event.is_set():
             logger.warning("🛑 Proceso cancelado por el usuario (Evento Cancel Set).")
             return []
-        
-        # --- NUEVO: Actualización de progreso ---
+
         if callback_progreso:
             callback_progreso(idx, total_archivos)
-        # ----------------------------------------
+
 
         ruta_completa = os.path.join(carpeta_entrada, archivo)
         logger.info(f"👉 [{idx+1}/{total_archivos}] Procesando: {archivo}")
@@ -384,10 +418,32 @@ def procesar_lote_pdfs(carpeta_entrada: str, cancel_event, callback_progreso=Non
 
             # 3. Parsing
             datos_extraidos = parse_house_pricing_text(full_text, link_map=link_mapping)
+
+            link_informe_recuperado = None
+            ruta_meta = ruta_completa + ".json"
+            if os.path.exists(ruta_meta):
+                try:
+                    with open(ruta_meta, "r", encoding="utf-8") as fm:
+                        meta_data = json.load(fm)
+                        link_cand = meta_data.get("link_informe")
+                        rol_origen = str(meta_data.get("rol_origen", "")).strip().upper()
+                        rol_pdf = str(datos_extraidos["informacion_general"].get("rol", "")).strip().upper()
+
+                        # VALIDACIÓN: El rol del JSON debe estar contenido o ser igual al del PDF
+                        # Usamos "in" porque a veces el PDF tiene espacios extra o formatos "123-4 "
+                        if rol_origen and rol_pdf and (rol_origen == rol_pdf or rol_origen in rol_pdf):
+                            link_informe_recuperado = link_cand
+                            logger.debug(f"     ✅ Validación Metadata OK: Rol {rol_origen} coincide con PDF.")
+                        else:
+                            logger.warning(f"     ⚠️ ERROR VALIDACIÓN: El JSON dice rol '{rol_origen}' pero el PDF es '{rol_pdf}'. Link ignorado.")
+                        
+                except Exception as e:
+                    logger.warning(f"   ⚠️ No se pudo leer metadata adjunta: {e}")
             
             datos_extraidos["meta_archivo"] = {
                 "nombre": archivo,
-                "ruta": ruta_completa
+                "ruta": ruta_completa,
+                "link_informe": link_informe_recuperado 
             }
             
             if datos_extraidos["informacion_general"].get("rol"):
@@ -400,7 +456,6 @@ def procesar_lote_pdfs(carpeta_entrada: str, cancel_event, callback_progreso=Non
             logger.error(f"❌ FATAL: Error leyendo {archivo}. Excepción: {e}", exc_info=True)
             continue
 
-    # Reportar 100% local al finalizar el bucle
     if callback_progreso:
         callback_progreso(total_archivos, total_archivos)
 
