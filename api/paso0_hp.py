@@ -12,6 +12,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait, Select
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.chrome.service import Service
 
 from dotenv import load_dotenv
 from logger import get_logger
@@ -108,7 +109,12 @@ def _configurar_driver(carpeta_descarga=None):
     logger.debug(f"informacion de configuracion del driver: {options}")
 
     options.add_experimental_option("prefs", prefs)
-    return webdriver.Chrome(options=options)
+
+    ruta_driver = "/home/ingresosgrupohou/bin/chromedriver-linux64/chromedriver"
+    service_obj = Service(ruta_driver)
+    
+    # NOTA: No ponemos binary_location, así usa el Chrome del sistema automáticamente
+    return webdriver.Chrome(service=service_obj, options=options)
 
 def _esperar_descarga(carpeta, timeout=60):
     logger.debug(f"   ⏳ Monitoreando carpeta {carpeta} (Timeout: {timeout}s)...")

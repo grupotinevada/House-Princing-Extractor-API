@@ -112,12 +112,15 @@ def main(cancel_event, ruta_lista=None, progress_callback=None):
         exito_paso0 = paso0_hp.ejecutar(ruta_lista, cancel_event, callback_progreso=cb_paso0)
         
         if not exito_paso0:
+            # Definimos un mensaje por defecto
+            mensaje_error = "❌ El Paso 0 falló o no se descargaron archivos."
+
             if cancel_event.is_set():
                 logger.warning("Proceso cancelado en Paso 0.")
+                return # Salimos limpiamente si fue cancelado
             else:
-                mensaje_error = "❌ El Paso 0 falló o no se descargaron archivos. Abortando."
                 logger.error(mensaje_error)
-            raise Exception(mensaje_error)
+                raise Exception(mensaje_error)
 
         logger.info("✅ Paso 0 completado. PDFs listos en carpeta de entrada.")
 
