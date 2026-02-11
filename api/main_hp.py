@@ -104,22 +104,41 @@ def main(cancel_event, ruta_lista=None, progress_callback=None):
         
         logger.info(f">>> EJECUTANDO PASO 0: Descarga automática desde {ruta_lista}...")
         if progress_callback: progress_callback(5, "Iniciando descargas...")
-        # Callback local para Paso 0
+        
         def cb_paso0(proc, tot):
             calcular_progreso_global(0, proc, tot, progress_callback)
 
-        # Ejecuta la lógica de descarga con callback
-        exito_paso0 = paso0_hp.ejecutar(ruta_lista, cancel_event, callback_progreso=cb_paso0)
+        # CAMBIO: Ahora desempaquetamos la tupla (cantidad_exitos, lista_fallidos)
+        cant_exitos, lista_fallidos = paso0_hp.ejecutar(ruta_lista, cancel_event, callback_progreso=cb_paso0)
         
-        if not exito_paso0:
-            # Definimos un mensaje por defecto
-            mensaje_error = "❌ El Paso 0 falló o no se descargaron archivos."
+        # Lógica de Validación de Errores para la API
+        if cant_exitos == 0:
+            mensaje_error = "❌ Fallo general en descargas."
+            
+            # Analizamos por qué fallaron
+            if lista_fallidos:
+                total_fallos = len(lista_fallidos)
+                # Contamos cuántos fueron por 'Rol no encontrado'
+                roles_inexistentes = [f for f in lista_fallidos if f.get('motivo_error') == "Rol no encontrado"]
+                cant_inexistentes = len(roles_inexistentes)
+
+                if cant_inexistentes == total_fallos:
+                    # CASO 1: Todos fallaron porque el rol no existe (Error de Datos del Usuario)
+                    mensaje_error = f"❌ Error: Ninguno de los {total_fallos} roles ingresados existe en House Pricing. Verifique comuna y rol."
+                elif cant_inexistentes > 0:
+                    # CASO 2: Mezcla
+                    mensaje_error = f"❌ Fallo total: {cant_inexistentes} roles no existen y el resto falló por conexión."
+                else:
+                    # CASO 3: Error técnico (Timeout, Login, etc)
+                    motivo = lista_fallidos[0].get('motivo_error', 'Desconocido')
+                    mensaje_error = f"❌ Error técnico en descargas: {motivo}."
 
             if cancel_event.is_set():
                 logger.warning("Proceso cancelado en Paso 0.")
-                return # Salimos limpiamente si fue cancelado
+                return 
             else:
                 logger.error(mensaje_error)
+                # AL LANZAR ESTA EXCEPCIÓN, server.py la captura y la pone en el JSON 'message'
                 raise Exception(mensaje_error)
 
         logger.info("✅ Paso 0 completado. PDFs listos en carpeta de entrada.")

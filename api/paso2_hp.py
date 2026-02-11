@@ -8,7 +8,6 @@
 ############################################################################################################################
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait, Select
@@ -356,10 +355,7 @@ def procesar_lote_worker(id_worker, sublista_propiedades, cancel_event, callback
     options.add_experimental_option("prefs", prefs)
     options.page_load_strategy = 'eager'
     
-    ruta_driver = "/home/ingresosgrupohou/bin/chromedriver-linux64/chromedriver"
-    service_obj = Service(ruta_driver)
-    
-    driver = webdriver.Chrome(service=service_obj, options=options)
+    driver = webdriver.Chrome(options=options)
     wait = WebDriverWait(driver, 20)
     
     lista_worker_enriquecida = []

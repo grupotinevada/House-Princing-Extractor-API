@@ -12,7 +12,6 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait, Select
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.chrome.service import Service
 
 from dotenv import load_dotenv
 from logger import get_logger
@@ -109,12 +108,7 @@ def _configurar_driver(carpeta_descarga=None):
     logger.debug(f"informacion de configuracion del driver: {options}")
 
     options.add_experimental_option("prefs", prefs)
-
-    ruta_driver = "/home/ingresosgrupohou/bin/chromedriver-linux64/chromedriver"
-    service_obj = Service(ruta_driver)
-    
-    # NOTA: No ponemos binary_location, así usa el Chrome del sistema automáticamente
-    return webdriver.Chrome(service=service_obj, options=options)
+    return webdriver.Chrome(options=options)
 
 def _esperar_descarga(carpeta, timeout=60):
     logger.debug(f"   ⏳ Monitoreando carpeta {carpeta} (Timeout: {timeout}s)...")
@@ -214,6 +208,24 @@ def _descargar_pdf_individual(driver, wait, item, carpeta_temporal):
         driver.execute_script("arguments[0].click();", btn_buscar)
         logger.debug(f" CLICK BUSCAR")
 
+        try:
+            logger.debug("   ⏳ Validando existencia del rol...")
+            condicion = EC.any_of(
+                EC.visibility_of_element_located((By.ID, "btn-submit")),
+                EC.visibility_of_element_located((By.ID, "search-rol-response-container"))
+            )
+            # 10 segundos es suficiente para que el servidor responda si el rol existe o no
+            elemento_detectado = WebDriverWait(driver, 10).until(condicion)
+            
+            if elemento_detectado.get_attribute("id") == "search-rol-response-container":
+                error_texto = driver.find_element(By.ID, "search-rol-response").text
+                logger.error(f"   ❌ ERROR DEL SITIO: '{error_texto}' para Rol {rol} en {comuna}")
+                return "ROL_NOT_FOUND"
+                
+        except TimeoutException:
+            logger.warning("   ⚠️ El sitio no respondió a la búsqueda (Timeout validación).")
+            return False
+
         # PASO 5: Esperar botón Generar
         logger.debug("   ⏳ Esperando confirmación de propiedad (Botón Generar)...")
         btn_generar = wait.until(EC.visibility_of_element_located((By.ID, "btn-submit")))
@@ -301,47 +313,53 @@ def procesar_lote_worker(id_worker, sublista_propiedades, cancel_event):
         os.makedirs(carpeta_worker)
 
     driver = _configurar_driver(carpeta_worker)
-    wait = WebDriverWait(driver, 15) # Wait corto para elementos UI normales
+    wait = WebDriverWait(driver, 15)
     
     exitos = 0
-    fallidos = [] # Lista local de fallos del worker
+    fallidos = [] 
 
     try:
         if not _iniciar_sesion_hp(driver, wait):
-            logger.error(f"      💀 [Worker-{id_worker}] Fallo definitivo")
-            return 0, sublista_propiedades # Retorna 0 éxitos y toda la lista como fallida
+            # Si falla la sesión, marcamos todos como error de login
+            for i in sublista_propiedades:
+                i['motivo_error'] = "Fallo Login"
+                fallidos.append(i)
+            return 0, fallidos
         
         for item in sublista_propiedades:
             if cancel_event.is_set(): break
             
-            # --- MODIFICACIÓN 2: BUCLE DE REINTENTOS (3 Intentos) ---
             exito_item = False
-            max_intentos = 3
-            logger.debug(f"      🔄 [Worker-{id_worker}] reintentando descarga para: {item['rol']}")
-            for intento in range(max_intentos):
-                if cancel_event.is_set(): break
-                
-                if intento > 0:
-                    logger.warning(f"      🔄 [Worker-{id_worker}] Reintentando ({intento+1}/{max_intentos})...")
-                    time.sleep(3) # Pausa para respirar
-                
-                if _descargar_pdf_individual(driver, wait, item, carpeta_worker):
-                    exito_item = True
-                    logger.success(f"      ✅ [Worker-{id_worker}] Éxito para: {item['rol']}")
-                    exitos += 1
-                    break # Salir del loop de intentos si funcionó
+            resultado = _descargar_pdf_individual(driver, wait, item, carpeta_worker)
+            
+            if resultado == "ROL_NOT_FOUND":
+                logger.error(f"      🚫 [Worker-{id_worker}] Saltando {item['rol']}: No existe en el servidor.")
+                item['motivo_error'] = "Rol no encontrado"  # <--- ETIQUETAMOS EL ERROR
+                fallidos.append(item)
+                continue 
+
+            if resultado is True:
+                exitos += 1
+                exito_item = True
+            else:
+                for intento in range(1, 3):
+                    if cancel_event.is_set(): break
+                    logger.warning(f"      🔄 [Worker-{id_worker}] Reintento {intento+1}/3 para {item['rol']}...")
+                    if _descargar_pdf_individual(driver, wait, item, carpeta_worker) is True:
+                        exitos += 1
+                        exito_item = True
+                        break
             
             if not exito_item:
-                logger.error(f"      💀 [Worker-{id_worker}] Fallo definitivo para: {item['rol']}")
+                if 'motivo_error' not in item:
+                    item['motivo_error'] = "Error Descarga/Timeout" # Etiqueta genérica
                 fallidos.append(item)
-            # --------------------------------------------------------
-            
+                
     finally:
         driver.quit()
         try: shutil.rmtree(carpeta_worker)
         except: pass
     
-    # Retornamos TUPLA: (cantidad_exitos, lista_de_dict_fallidos)
     return exitos, fallidos
 
 # ==============================================================================
@@ -353,36 +371,27 @@ def orquestador_descargas(lista_propiedades, cancel_event, callback_progreso=Non
     total = len(lista_propiedades)
     logger.info(f"🚀 Iniciando ciclo de descargas PARALELO para {total} propiedades. WORKERS={WORKERS}")
 
-    # Dividimos la lista en partes iguales para los workers
     chunk_size = math.ceil(total / WORKERS)
     chunks = [lista_propiedades[i:i + chunk_size] for i in range(0, total, chunk_size)]
     
     total_exitos = 0
     total_fallidos = []
-    
-    # Nuevo: Contador para progreso
     procesados_global = 0
 
     with ThreadPoolExecutor(max_workers=WORKERS) as executor:
         futures = []
         for i, chunk in enumerate(chunks):
-            # Lanzamos cada worker con su ID y su pedazo de lista
             futures.append(executor.submit(procesar_lote_worker, i+1, chunk, cancel_event))
         
-        # Esperamos resultados
         for future in futures:
             try:
-                # Desempaquetamos la tupla de retorno
                 e_count, f_list = future.result()
                 total_exitos += e_count
                 total_fallidos.extend(f_list)
                 
-                # --- NUEVO: Actualización de progreso ---
-                # Sumamos los éxitos + fallidos de este chunk para saber cuántos se procesaron
                 procesados_global += (e_count + len(f_list))
                 if callback_progreso:
                     callback_progreso(procesados_global, total)
-                # ----------------------------------------
 
             except Exception as e:
                 logger.error(f"❌ Error crítico en worker: {e}")
@@ -402,7 +411,7 @@ def orquestador_descargas(lista_propiedades, cancel_event, callback_progreso=Non
 
     logger.success(f"🏁 Proceso finalizado. Descargas exitosas: {total_exitos}/{total}")     
     
-    return total_exitos > 0
+    return total_exitos, total_fallidos
 
 # ==============================================================================
 # ENTRY POINT
@@ -415,12 +424,12 @@ def ejecutar(ruta_archivo: str, cancel_event, callback_progreso=None) -> bool:
     raw = detectar_y_cargar(ruta_archivo)
     if not raw: 
         logger.error("❌ No se pudieron cargar los datos iniciales. Abortando.")
-        return False
+        return 0, []
         
     clean = estandarizar_data(raw)
     if not clean: 
         logger.error("❌ No hay datos válidos después de la limpieza. Abortando.")
-        return False
+        return 0, []
         
     # Pasamos el callback al orquestador
     return orquestador_descargas(clean, cancel_event, callback_progreso=callback_progreso)
