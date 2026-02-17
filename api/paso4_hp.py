@@ -34,9 +34,22 @@ def convertir_fecha_mysql(fecha_str: Any) -> Any:
         return None
 
 def limpiar_precio_uf(valor: Any) -> float:
-    """Transforma 'UF 4.800' -> 4800.0 (Float para decimales)."""
+    """
+    Normaliza UF/Pesos a float estándar para la BD.
+    Ej: "4.638" -> 4638.0 (Quita punto de miles)
+    Ej: "17,53" -> 17.53  (Cambia coma por punto decimal)
+    """
     if not valor: return 0.0
-    s = str(valor).upper().replace("UF", "").replace(".", "").replace(",", ".").strip()
+    
+    # 1. Convertir a string y limpiar basura (UF, $, espacios)
+    s = str(valor).upper().replace("UF", "").replace("$", "").strip()
+    
+    # 2. ELIMINAR PUNTO DE MILES (Para que "4.638" sea "4638")
+    s = s.replace(".", "")
+    
+    # 3. REEMPLAZAR COMA POR PUNTO (Para que "17,53" sea "17.53")
+    s = s.replace(",", ".")
+    
     try:
         return float(s)
     except:
@@ -56,30 +69,6 @@ def limpiar_int(valor: Any) -> int:
     if not valor: return 0
     try:
         s = re.sub(r'[^\d]', '', str(valor))
-        return int(s)
-    except:
-        return 0
-
-# --- NUEVO HELPER PARA MONTOS GRANDES ---
-def limpiar_monto_entero(valor: Any) -> int:
-    """
-    Transforma montos monetarios a ENTEROS para BIGINT.
-    'UF 2.742' -> 2742
-    '$ 150.000.000' -> 150000000
-    'UF 5.250,50' -> 5250 (Trunca decimales para BIGINT)
-    """
-    if not valor: return 0
-    
-    # 1. Quitamos basura de texto conocida
-    s = str(valor).upper().replace("UF", "").replace("$", "").replace(".", "").strip()
-    
-    # 2. Si viene con coma decimal (ej: UF 5,5), cortamos la parte decimal porque BIGINT no la soporta
-    if "," in s:
-        s = s.split(",")[0]
-
-    try:
-        # 3. Dejamos solo dígitos
-        s = re.sub(r'[^\d]', '', s)
         return int(s)
     except:
         return 0
@@ -142,7 +131,7 @@ def insertar_datos(lista_datos: List[Dict[str, Any]], cancel_event, callback_pro
             
             # Limpiezas críticas
             fecha_tx_clean = convertir_fecha_mysql(trans.get("fecha"))
-            monto_tx_clean = limpiar_monto_entero(trans.get("monto")) 
+            monto_tx_clean = limpiar_precio_uf(trans.get("monto"))
 
             # Se agregan link_informe + las columnas de tasación
             sql_propiedad = """
@@ -169,8 +158,12 @@ def insertar_datos(lista_datos: List[Dict[str, Any]], cancel_event, callback_pro
                 fecha_tx_clean,
                 monto_tx_clean, 
                 vend_str, comp_str, meta.get("nombre"),
-                meta.get("link_informe"), # <--- Inserción del Link
-                None, None, None, None    # <--- Campos Tasación (Placeholder)
+                meta.get("link_informe"), 
+
+                item.get("tasa_vta_clp", 0),
+                limpiar_precio_uf(item.get("tasa_vta_uf", "0")), # Limpia el punto de miles (4.638 -> 4638.0)
+                item.get("tasa_arr_clp", 0),
+                limpiar_precio_uf(item.get("tasa_arr_uf", "0"))
             )
             
             cursor.execute(sql_propiedad, valores_propiedad)

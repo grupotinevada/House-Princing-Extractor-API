@@ -17,12 +17,14 @@ from fastapi.responses import FileResponse
 import mysql.connector
 from dotenv import load_dotenv
 from pydantic import BaseModel
+import time
+import utils
 
 # --- 1. CONFIGURACIÓN DE RUTAS E IMPORTS ---
 # Definimos la Raíz del Proyecto (Donde está este archivo server.py)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 load_dotenv()
-
+SEMAFORO_PROCESAMIENTO = threading.Lock()
 
 class PropiedadRequest(BaseModel):
     rol: str
@@ -69,10 +71,11 @@ app = FastAPI(title="House Pricing API Worker")
 
 # Configuración CORS (Permite que tu PHP/HTML local se conecte sin bloqueos)
 app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"], 
+CORSMiddleware,
+    allow_origins=["*"], # Permite conexiones desde cualquier origen (tu PHP)
+    allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"],
+    allow_headers=["*"]
 )
 
 # --- 2. GESTIÓN DE ESTADO (MEMORIA) ---
@@ -90,7 +93,7 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 
 # --- 3. WORKER DE FONDO (BACKGROUND TASK) ---
-def ejecutar_proceso_background(task_id: str, file_path: str):
+def ejecutar_proceso_background(task_id: str, file_path: str, cancel_event: threading.Event):
     """
     Esta función corre en un hilo separado gestionado por FastAPI.
     Llama a main_hp.main() y actualiza el diccionario global 'tasks'.
@@ -98,13 +101,32 @@ def ejecutar_proceso_background(task_id: str, file_path: str):
     logger.info(f"🚀 [API] Iniciando tarea {task_id} con archivo: {file_path}")
     
     # Creamos el evento de cancelación para este hilo
-    cancel_event = threading.Event()
-    
+    # cancel_event = threading.Event()
+    stop_monitor_event = threading.Event()
+
     # Actualizamos el estado inicial
     if task_id in tasks:
-        tasks[task_id]["cancel_event"] = cancel_event
-        tasks[task_id]["status"] = "processing"
+        tasks[task_id]["status"] = "queued"
+        tasks[task_id]["message"] = "⏳ Servidor ocupado. Tu tarea está en cola de espera..."
         tasks[task_id]["progress"] = 0
+        tasks[task_id]["stats"] = {}
+
+    logger.info(f"🚦 [API] Tarea {task_id} esperando su turno...")
+
+    def monitor_loop():
+        """Hilo que mide RAM/CPU cada 2 segundos"""
+        while not stop_monitor_event.is_set():
+            if task_id in tasks:
+                # Llamamos a utils.py
+                datos = utils.obtener_uso_recursos()
+                tasks[task_id]["stats"] = datos
+                logger.info(
+                    f"📊 [MONITOR {task_id[:4]}] "
+                    f"RAM: {datos.get('ram_uso_mb')}MB ({datos.get('ram_sistema_percent')}%) | "
+                    f"CPU: {datos.get('cpu_proceso_percent')}% | "
+                    f"Chrome Zombies: {datos.get('workers_chrome_activos')}"
+                )
+            time.sleep(2)
 
     # Definimos el callback que main_hp llamará para reportar progreso
     def progress_callback_api(porcentaje, mensaje):
@@ -121,53 +143,87 @@ def ejecutar_proceso_background(task_id: str, file_path: str):
             if porcentaje == 0 or porcentaje == 25 or porcentaje == 50 or porcentaje == 75 or porcentaje == 100:
                 logger.info(f"📊 Task {task_id}: {porcentaje}% - {mensaje}")
 
-    try:
-        # --- LLAMADA MAESTRA A LA LÓGICA ---
-        # Llamamos al main modificado. 
-        # IMPORTANTE: main_hp.py ya debe tener la firma: main(cancel_event, ruta_lista, progress_callback)
-        exito = main_hp.main(
-            cancel_event=cancel_event,
-            ruta_lista=file_path,
-            progress_callback=progress_callback_api
-        )
-        
-        # Verificación Post-Ejecución
-        if tasks[task_id]["status"] == "cancelled":
-            logger.warning(f"🛑 [API] Tarea {task_id} finalizó como cancelada.")
-        
-        elif exito is False:
-             tasks[task_id]["status"] = "error"
-             tasks[task_id]["message"] = "El proceso reportó un fallo interno (ver logs de lógica)."
-        
-        else:
-            # BUSCAR EL ARCHIVO RESULTANTE
-            # main_hp guarda en house_pricing_outputs. Buscamos el xlsx más reciente.
-            list_of_files = glob.glob(os.path.join(OUTPUT_DIR, '*.xlsx')) 
+    # === INICIO DEL SISTEMA DE COLA ===
+    # El hilo se detendrá aquí si hay otro proceso ejecutándose
+    with SEMAFORO_PROCESAMIENTO:
+        if cancel_event.is_set():
+            logger.warning(f"🛑 Tarea {task_id} cancelada antes de salir de la cola.")
+            tasks[task_id]["status"] = "cancelled"
+            if os.path.exists(file_path): os.remove(file_path)
+            return
+        logger.info(f"🟢 [API] Turno concedido a {task_id}. Iniciando...")
+
+        hilo_monitor = threading.Thread(target=monitor_loop, daemon=True)
+        hilo_monitor.start()
+
+        # Actualizamos estado a "Procesando" ahora que tenemos el lock
+        if task_id in tasks:
+            tasks[task_id]["status"] = "processing"
+            tasks[task_id]["message"] = "🚀 Iniciando procesamiento..."
+
+        try:
+            # --- LLAMADA MAESTRA A LA LÓGICA ---
+            # Llamamos al main modificado. 
+            # IMPORTANTE: main_hp.py ya debe tener la firma: main(cancel_event, ruta_lista, progress_callback)
+            exito = main_hp.main(
+                cancel_event=cancel_event,
+                ruta_lista=file_path,
+                progress_callback=progress_callback_api
+            )
             
-            if list_of_files:
-                latest_file = max(list_of_files, key=os.path.getctime)
+            # Verificación Post-Ejecución
+            if cancel_event.is_set():
+                tasks[task_id]["status"] = "cancelled"
+                tasks[task_id]["message"] = "Tarea cancelada por el usuario."
+                utils.matar_procesos_zombies()
+            
+            elif exito:
+                # --- MODIFICACIÓN: EXITO GARANTIZADO ---
+                # Si main_hp devolvió True, marcamos como completado INMEDIATAMENTE.
                 tasks[task_id]["status"] = "completed"
                 tasks[task_id]["progress"] = 100
-                tasks[task_id]["result_file"] = latest_file
-                tasks[task_id]["message"] = "Proceso finalizado con éxito."
-                logger.success(f"✅ [API] Tarea {task_id} completada. Archivo: {os.path.basename(latest_file)}")
+                tasks[task_id]["message"] = "Proceso finalizado exitosamente."
+                
+                # Intentamos buscar el archivo solo para habilitar el botón de descarga,
+                # pero si falla, NO marcamos error en la tarea.
+                try:
+                    list_of_files = glob.glob(os.path.join(OUTPUT_DIR, '*.xlsx'))
+                    if list_of_files:
+                        latest_file = max(list_of_files, key=os.path.getctime)
+                        tasks[task_id]["result_file"] = latest_file
+                        logger.info(f"✅ [API] Archivo vinculado: {os.path.basename(latest_file)}")
+                    else:
+                        logger.warning(f"⚠️ Proceso OK, pero no se detectó el Excel automáticamente en {OUTPUT_DIR}")
+                except Exception as e:
+                    logger.warning(f"⚠️ Error menor buscando archivo de salida: {e}")
+                else:
+                    tasks[task_id]["status"] = "error"
+                    tasks[task_id]["message"] = "El proceso terminó OK, pero no se encontró el Excel generado."
+                    logger.error(f"❌ [API] Tarea {task_id} terminó sin archivo de salida en {OUTPUT_DIR}.")
+            
             else:
                 tasks[task_id]["status"] = "error"
-                tasks[task_id]["message"] = "El proceso terminó OK, pero no se encontró el Excel generado."
-                logger.error(f"❌ [API] Tarea {task_id} terminó sin archivo de salida en {OUTPUT_DIR}.")
+                tasks[task_id]["message"] = "El proceso reportó un fallo interno (ver logs de lógica)."
 
-    except Exception as e:
-        logger.error(f"❌ [API] Excepción no controlada en Task {task_id}: {e}", exc_info=True)
-        tasks[task_id]["status"] = "error"
-        tasks[task_id]["message"] = f"Error interno del servidor: {str(e)}"
-    
-    finally:
-        # Limpieza del archivo subido (Input)
-        if os.path.exists(file_path):
-            try:
-                os.remove(file_path)
-            except: 
-                pass
+                
+
+        except Exception as e:
+            logger.error(f"❌ [API] Excepción no controlada en Task {task_id}: {e}", exc_info=True)
+            tasks[task_id]["status"] = "error"
+            tasks[task_id]["message"] = f"Error interno del servidor: {str(e)}"
+            utils.matar_procesos_zombies()
+
+        finally:
+            stop_monitor_event.set()
+            hilo_monitor.join(timeout=1)
+
+            # Limpieza del archivo subido (Input)
+            if os.path.exists(file_path):
+                try:
+                    os.remove(file_path)
+                except: 
+                    pass
+    # === FIN DEL SISTEMA DE COLA (Se libera el semáforo automáticamente) ===
 
 
 # --- 4. ENDPOINTS ---
@@ -195,18 +251,18 @@ async def upload_and_process(file: UploadFile = File(...), background_tasks: Bac
     except Exception as e:
         logger.error(f"Error guardando upload: {e}")
         raise HTTPException(status_code=500, detail="Error guardando el archivo.")
-
+    cancel_event = threading.Event()
     # Inicializar estado en memoria
     tasks[task_id] = {
         "status": "queued",
         "progress": 0,
         "message": "En cola...",
         "filename": file.filename,
-        "cancel_event": None # Se crea dentro del thread
+        "cancel_event": cancel_event # Se crea dentro del thread
     }
 
     # Encolar tarea
-    background_tasks.add_task(ejecutar_proceso_background, task_id, file_location)
+    background_tasks.add_task(ejecutar_proceso_background, task_id, file_location, cancel_event)
 
     return {
         "task_id": task_id, 
@@ -241,25 +297,25 @@ async def process_json_data(
     except Exception as e:
         logger.error(f"Error creando archivo temporal desde JSON: {e}")
         raise HTTPException(status_code=500, detail="Error interno al procesar los datos.")
-
+    cancel_event = threading.Event()
     # 3. Inicializar estado en memoria
     tasks[task_id] = {
         "status": "queued",
         "progress": 0,
         "message": "Datos JSON recibidos. En cola...",
         "filename": "Entrada_JSON.json",
-        "cancel_event": None
+        "cancel_event": cancel_event
     }
 
     # 4. Encolar la misma función de background que usa el upload
-    background_tasks.add_task(ejecutar_proceso_background, task_id, file_location)
+    background_tasks.add_task(ejecutar_proceso_background, task_id, file_location, cancel_event)
 
     return {
         "task_id": task_id, 
         "status": "queued", 
         "message": "Datos recibidos correctamente. Proceso iniciado."
     }
-    
+
 @app.get("/status/{task_id}")
 def get_status(task_id: str):
     """
@@ -273,7 +329,8 @@ def get_status(task_id: str):
         "task_id": task_id,
         "status": task["status"],
         "progress": task["progress"],
-        "message": task.get("message", "")
+        "message": task.get("message", ""),
+        "system_stats": task.get("stats", {})
     }
 
 @app.get("/download/{task_id}")

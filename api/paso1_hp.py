@@ -373,8 +373,9 @@ def parse_house_pricing_text(full_text: str, link_map: Dict[str, str] = {}) -> D
 
     return data
 
-# --- PROCESAMIENTO EN LOTE ---
-# Modificación: Agregar callback_progreso=None
+# ==============================================================================
+# PROCESAMIENTO EN LOTE 
+# ==============================================================================
 def procesar_lote_pdfs(carpeta_entrada: str, cancel_event, callback_progreso=None) -> List[Dict[str, Any]]:
     logger.info(f"🏁 Iniciando proceso de lote en: {carpeta_entrada}")
     resultados_json = []
@@ -407,19 +408,27 @@ def procesar_lote_pdfs(carpeta_entrada: str, cancel_event, callback_progreso=Non
                 logger.debug(f"   📖 Abierto {archivo} con pdfplumber ({len(pdf.pages)} páginas)")
                 
                 # 1. Mapeo de Links (Coordenadas)
-                # Buscamos links DEBAJO de los roles antes de extraer el texto plano
                 link_mapping = map_roles_to_links(pdf)
                 
                 # 2. Extracción de Texto Completo
                 for p_idx, page in enumerate(pdf.pages):
                     text = page.extract_text(layout=True)
                     if text: full_text += text + "\n"
-                    # logger.debug(f"   📄 Texto extraído pág {p_idx+1}")
 
             # 3. Parsing
             datos_extraidos = parse_house_pricing_text(full_text, link_map=link_mapping)
 
+            # --- LECTURA DE METADATA (TASACIONES) ---
             link_informe_recuperado = None
+            
+            # Variables de tasación por defecto
+            tasacion_data = {
+                "tasa_vta_clp": 0,
+                "tasa_vta_uf": "0",
+                "tasa_arr_clp": 0,
+                "tasa_arr_uf": "0"
+            }
+
             ruta_meta = ruta_completa + ".json"
             if os.path.exists(ruta_meta):
                 try:
@@ -430,12 +439,18 @@ def procesar_lote_pdfs(carpeta_entrada: str, cancel_event, callback_progreso=Non
                         rol_pdf = str(datos_extraidos["informacion_general"].get("rol", "")).strip().upper()
 
                         # VALIDACIÓN: El rol del JSON debe estar contenido o ser igual al del PDF
-                        # Usamos "in" porque a veces el PDF tiene espacios extra o formatos "123-4 "
                         if rol_origen and rol_pdf and (rol_origen == rol_pdf or rol_origen in rol_pdf):
                             link_informe_recuperado = link_cand
-                            logger.debug(f"     ✅ Validación Metadata OK: Rol {rol_origen} coincide con PDF.")
+                            
+                            # --- NUEVO: Extraer datos de tasación del JSON ---
+                            tasacion_data["tasa_vta_clp"] = meta_data.get("tasa_vta_clp", 0)
+                            tasacion_data["tasa_vta_uf"] = meta_data.get("tasa_vta_uf", "0")
+                            tasacion_data["tasa_arr_clp"] = meta_data.get("tasa_arr_clp", 0)
+                            tasacion_data["tasa_arr_uf"] = meta_data.get("tasa_arr_uf", "0")
+                            
+                            logger.debug(f"     ✅ Metadata y Tasación recuperadas para Rol {rol_origen}.")
                         else:
-                            logger.warning(f"     ⚠️ ERROR VALIDACIÓN: El JSON dice rol '{rol_origen}' pero el PDF es '{rol_pdf}'. Link ignorado.")
+                            logger.warning(f"     ⚠️ ERROR VALIDACIÓN: El JSON dice rol '{rol_origen}' pero el PDF es '{rol_pdf}'. Link y Tasación ignorados.")
                         
                 except Exception as e:
                     logger.warning(f"   ⚠️ No se pudo leer metadata adjunta: {e}")
@@ -445,6 +460,9 @@ def procesar_lote_pdfs(carpeta_entrada: str, cancel_event, callback_progreso=Non
                 "ruta": ruta_completa,
                 "link_informe": link_informe_recuperado 
             }
+            
+            # Fusionamos la tasación en la raíz del objeto para que Paso 3 y 4 la encuentren fácil
+            datos_extraidos.update(tasacion_data)
             
             if datos_extraidos["informacion_general"].get("rol"):
                 resultados_json.append(datos_extraidos)

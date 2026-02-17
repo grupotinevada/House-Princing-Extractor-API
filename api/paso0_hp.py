@@ -12,17 +12,19 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait, Select
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException
 
 from dotenv import load_dotenv
 from logger import get_logger
 
-# Configuración
+# # Configuración
 logger = get_logger("paso0_hp", log_dir="logs", log_file="paso0.log")
 load_dotenv()
 
 OUTPUT_FOLDER = os.path.abspath("./input_pdfs")
 URL_LOGIN = os.getenv("LOGIN_URL")
 URL_ANTECEDENTES = os.getenv("URL_ANTECEDENTES")
+URL_TASACIONES = os.getenv("URL_TASACIONES")
 EMAIL_HP = os.getenv("USUARIO_HP")
 PASS_HP = os.getenv("PASSWORD_HP")
 
@@ -101,14 +103,98 @@ def _configurar_driver(carpeta_descarga=None):
         "download.prompt_for_download": False,
         "download.directory_upgrade": True,
         "plugins.always_open_pdf_externally": True,
+        
+        # Desactivar visor de imágenes y notificaciones (Optimización)
         "profile.managed_default_content_settings.images": 2, 
         "profile.default_content_setting_values.notifications": 2, 
+        
+        # --- NUEVO: Desactivar Escaneo SafeBrowsing (EL BLINDAJE) ---
+        "safebrowsing.enabled": False,  # Mantenemos el servicio activo...
+        "safebrowsing.disable_download_protection": True, # ...pero desactivamos protección de descargas
+        "profile.default_content_settings.popups": 0,
+        "profile.content_settings.exceptions.automatic_downloads.*.setting": 1,
+        
+        # Forzar que NO pregunte por confirmación en descargas peligrosas
+        "download.prompt_for_download": False,
+        "safebrowsing.disable_extension_blacklist": True,
     }
 
     logger.debug(f"informacion de configuracion del driver: {options}")
 
     options.add_experimental_option("prefs", prefs)
     return webdriver.Chrome(options=options)
+
+def _reparar_descargas_bloqueadas(driver):
+    """
+    Entra al gestor de descargas de Chrome, busca items bloqueados/peligrosos
+    y fuerza la aprobación (Click en 'Conservar' / 'Keep').
+    """
+    logger.info("   🚑 Iniciando protocolo de reparación de descargas en Chrome...")
+    reparado = False
+    try:
+        # Abrir pestaña de descargas
+        driver.execute_script("window.open('chrome://downloads/', '_blank');")
+        time.sleep(1) # Esperar apertura
+        driver.switch_to.window(driver.window_handles[-1])
+        
+        # Script JS para penetrar Shadow DOM y hacer click en "Conservar"
+        # Busca botones de acción en items peligrosos
+        js_fix = """
+            const manager = document.querySelector('downloads-manager');
+            if (manager && manager.shadowRoot) {
+                const items = manager.shadowRoot.querySelectorAll('downloads-item');
+                if (items.length > 0) {
+                    const item = items[0]; // Miramos el último archivo (el de arriba)
+                    
+                    // Si está en estado peligroso o advertencia
+                    if (item.state === 'DANGEROUS' || item.state === 'IN_PROGRESS') {
+                        
+                        // Intento 1: Botón "Conservar" (Save) en el Shadow DOM
+                        const saveBtn = item.shadowRoot.querySelector('cr-button[focus-type="save"]');
+                        if (saveBtn) {
+                            saveBtn.click();
+                            return "FIXED_SAVE";
+                        }
+                        
+                        // Intento 2: Botón de acción genérica "Conservar" (Dangerous)
+                        const dangerousBtn = item.shadowRoot.querySelector('#dangerous .action-button');
+                        if (dangerousBtn) {
+                            dangerousBtn.click();
+                            return "FIXED_DANGEROUS";
+                        }
+                        
+                        // Intento 3: Enlace "Conservar archivo peligroso" (versiones antiguas)
+                        const linkKeep = item.shadowRoot.querySelector('a#safe');
+                        if (linkKeep) {
+                            linkKeep.click();
+                            return "FIXED_LINK";
+                        }
+                        
+                        return "FOUND_BUT_NO_BUTTON";
+                    }
+                }
+            }
+            return "NO_ISSUE_FOUND";
+        """
+        
+        # Ejecutamos el fix
+        resultado = driver.execute_script(js_fix)
+        logger.debug(f"   🔧 Resultado script reparación: {resultado}")
+        
+        if "FIXED" in resultado:
+            reparado = True
+            time.sleep(2) # Dar tiempo a Chrome para finalizar la escritura en disco
+            
+    except Exception as e:
+        logger.warning(f"   ⚠️ Falló el intento de reparación manual: {e}")
+    finally:
+        # Cerrar pestaña de descargas y volver a la principal
+        if len(driver.window_handles) > 1:
+            driver.close()
+            driver.switch_to.window(driver.window_handles[0])
+            
+    return reparado
+
 
 def _esperar_descarga(carpeta, timeout=60):
     logger.debug(f"   ⏳ Monitoreando carpeta {carpeta} (Timeout: {timeout}s)...")
@@ -243,7 +329,7 @@ def _descargar_pdf_individual(driver, wait, item, carpeta_temporal):
         
         btn_descarga = wait_descarga.until(EC.element_to_be_clickable((By.XPATH, xpath_download)))
         
-        # --- NUEVO: CAPTURA DEL LINK ---
+        # --- CAPTURA DEL LINK ---
         link_informe = btn_descarga.get_attribute("href")
         logger.debug(f"   🔗 Link detectado: {link_informe}")
         # -------------------------------
@@ -258,8 +344,17 @@ def _descargar_pdf_individual(driver, wait, item, carpeta_temporal):
         logger.info(f"   📥 Informe listo. Click en Descargar PDF...")
         driver.execute_script("arguments[0].click();", btn_descarga)
         
-        archivo = _esperar_descarga(carpeta_temporal)
+        archivo = _esperar_descarga(carpeta_temporal, timeout=30)
         
+        if not archivo:
+            logger.warning("   ⚠️ Descarga no finalizada. Verificando bloqueos de Chrome...")
+            se_reparo = _reparar_descargas_bloqueadas(driver)
+            
+            if se_reparo:
+                logger.info("   ✅ Bloqueo reparado. Esperando archivo final...")
+                # 3. Segundo intento de espera (damos 15s extra para que termine de escribir)
+                archivo = _esperar_descarga(carpeta_temporal, timeout=15)
+
         if archivo:
             nombre_final = os.path.join(OUTPUT_FOLDER, f"{comuna}_{rol}.pdf".replace(" ", "_").replace("/", "-"))
             if os.path.exists(nombre_final):
@@ -272,13 +367,17 @@ def _descargar_pdf_individual(driver, wait, item, carpeta_temporal):
                 logger.debug(f" Reintentos en mover el archivo: {intento + 1}")
                 try:
                     shutil.move(archivo, nombre_final)
-                    
+
+                    datos_tasacion = _extraer_tasaciones(driver, wait, rol, comuna)
+
+                    print(datos_tasacion)
                     # Guardamos un pequeño JSON con el mismo nombre pero extensión .json
                     ruta_meta = nombre_final + ".json"
                     meta_data = {
                         "link_informe": link_informe,
                         "rol_origen": rol,        # <--- Para validar luego
-                        "comuna_origen": comuna
+                        "comuna_origen": comuna,
+                        **datos_tasacion
                     }
                     with open(ruta_meta, "w", encoding="utf-8") as f:
                         json.dump(meta_data, f)
@@ -297,12 +396,194 @@ def _descargar_pdf_individual(driver, wait, item, carpeta_temporal):
                 logger.error(f"   ❌ No se pudo mover el archivo final: {nombre_final}")
                 return False
         else:
-            logger.error("   ❌ Timeout esperando la descarga física del archivo.")
+            logger.error("   ❌ Timeout definitivo: El archivo no se descargó (incluso tras intento de reparación).")
             return False
 
     except Exception as e:
         logger.error(f"   ❌ Fallo durante la descarga: {e}")
         return False
+
+    except Exception as e:
+        logger.error(f"   ❌ Fallo durante la descarga: {e}")
+        return False
+
+# ==============================================================================
+# 4. Extraer tasaciones (FASE 2: NAVEGACIÓN WIZARD)
+# ==============================================================================
+def _extraer_tasaciones(driver, wait, rol, comuna):
+    """
+    Navega al tasador, busca la propiedad y avanza por el wizard (Next -> Next -> Ver Tasación).
+    Incluye lógica de reintento si aparece una alerta de error del sitio o timeout del servidor.
+    """
+    # IMPORT CRÍTICO: Aseguramos que todas las excepciones estén disponibles en este scope
+    from selenium.common.exceptions import UnexpectedAlertPresentException, NoAlertPresentException, TimeoutException
+    
+    logger.info(f"   💰 Iniciando búsqueda en Tasador para {rol} ({comuna})...")
+    
+    # Estructura base
+    data = {
+        "tasa_vta_clp": 0,
+        "tasa_vta_uf": "0", 
+        "tasa_arr_clp": 0,
+        "tasa_arr_uf": "0" 
+    }
+
+    MAX_INTENTOS = 3
+
+    for intento in range(1, MAX_INTENTOS + 1):
+        try:
+            # 1. Navegación (Siempre reiniciamos la navegación en cada intento)
+            driver.get(URL_TASACIONES)
+            
+            # 2. Seleccionar Tab "Rol"
+            try:
+                xpath_toggle = "//label[.//input[@value='search-rol']]"
+                toggle_rol = wait.until(EC.element_to_be_clickable((By.XPATH, xpath_toggle)))
+                toggle_rol.click()
+            except TimeoutException:
+                # Fallback por si el toggle no responde rápido
+                driver.find_element(By.XPATH, "//label[contains(., 'Rol')]").click()
+
+            # 3. Seleccionar Comuna (Lógica Inyección JS)
+            try:
+                select_comuna = driver.find_element(By.ID, "select-comuna")
+                driver.execute_script("arguments[0].style.display = 'block';", select_comuna)
+                try:
+                    Select(select_comuna).select_by_visible_text(comuna)
+                except:
+                    Select(select_comuna).select_by_visible_text(comuna.title())
+                driver.execute_script("arguments[0].dispatchEvent(new Event('change'));", select_comuna)
+            except Exception as e:
+                logger.warning(f"   ⚠️ Error seleccionando comuna en Tasador: {e}")
+
+            # 4. Ingresar Rol
+            input_rol = wait.until(EC.visibility_of_element_located((By.ID, "rol")))
+            input_rol.clear()
+            input_rol.send_keys(rol)
+
+            # 5. Click Buscar
+            btn_buscar = driver.find_element(By.ID, "btn-search-rol")
+            driver.execute_script("arguments[0].click();", btn_buscar)
+            logger.debug(f"   🖱️ [Intento {intento}] Click en Buscar Tasación...")
+
+            # 6. Espera Inteligente: ¿Éxito o Fallo?
+            locator_exito = (By.ID, "form-summary")
+            locator_error = (By.ID, "search-rol-response")
+
+            elemento_resultado = wait.until(EC.any_of(
+                EC.visibility_of_element_located(locator_exito),
+                EC.visibility_of_element_located(locator_error)
+            ))
+
+            # 7. Validación y Navegación del Wizard
+            id_resultado = elemento_resultado.get_attribute("id")
+            
+            if id_resultado == "form-summary":
+                logger.success(f"   ✅ Tasador: Propiedad encontrada. Iniciando secuencia de Wizard...")
+                
+                # --- FASE 2: SECUENCIA DE BOTONES ---
+                
+                # Paso A: Click Siguiente 1 (Características)
+                btn_next_1 = wait.until(EC.element_to_be_clickable((By.ID, "btn-next-1")))
+                driver.execute_script("arguments[0].click();", btn_next_1)
+                
+                # Paso B: Click Siguiente 2 (Mapa/Ubicación)
+                btn_next_2 = wait.until(EC.element_to_be_clickable((By.ID, "btn-next-2")))
+                driver.execute_script("arguments[0].click();", btn_next_2)
+                
+                # Paso C: Click Ver Tasación (Final)
+                btn_next_3 = wait.until(EC.element_to_be_clickable((By.ID, "btn-next-3")))
+                driver.execute_script("arguments[0].click();", btn_next_3)
+                logger.debug("   🚀 Wizard: Paso 3 completado (Ver Tasación). Esperando carga final...")
+                
+                # --- FASE 3 (Extracción de precios final) ---
+                try:
+                    # 1. Esperamos explícitamente a que el botón "Ver Tasación" DESAPAREZCA.
+                    # Esto confirma que el click funcionó y la UI está transicionando.
+                    wait.until(EC.invisibility_of_element_located((By.ID, "btn-next-3")))
+                    
+                    # 2. Definimos un Wait ESPECIAL de 60 segundos para la tasación (el global suele ser corto)
+                    wait_tasacion = WebDriverWait(driver, 150)
+                    
+                    # 3. Esperamos a que aparezca el elemento de precio
+                    xpath_precio_venta = "//h3[contains(., 'Precio estimado de venta')]/following::span[contains(@class, 'text-4xl')]"
+                    wait_tasacion.until(EC.visibility_of_element_located((By.XPATH, xpath_precio_venta)))
+                    
+                except TimeoutException:
+                    logger.warning(f"   ⏳ [Intento {intento}] Timeout esperando generación de precios (Tasación lenta). Reintentando...")
+                    if intento < MAX_INTENTOS:
+                        continue # Reiniciamos el ciclo
+                    else:
+                        logger.error("   ❌ Timeout final: No cargaron los precios tras espera extendida.")
+                        return data
+
+                # Helpers de limpieza locales
+                def clean_clp(txt):
+                    if not txt: return 0
+                    clean = txt.replace('$', '').replace('.', '').strip()
+                    return int(clean) if clean.isdigit() else 0
+
+                def clean_uf(txt):
+                    if not txt: return "0"
+                    clean = txt.replace('UF', '').replace('.', '').strip()
+                    return clean
+
+                try:
+                    # 1. VENTA
+                    raw_vta_clp = driver.find_element(By.XPATH, "//h3[contains(., 'Precio estimado de venta')]/following::span[contains(@class, 'text-4xl')][1]").text
+                    logger.info(f"Valor vta CLP extraido: {raw_vta_clp}")
+                    raw_vta_uf = driver.find_element(By.XPATH, "//h3[contains(., 'Precio estimado de venta')]/following::span[contains(text(), 'UF')][1]").text
+                    logger.info(f"Valor vta UF extraido: {raw_vta_uf}")
+                    
+                    # 2. ARRIENDO
+                    raw_arr_clp = driver.find_element(By.XPATH, "//h3[contains(., 'Precio estimado de arriendo')]/following::span[contains(@class, 'text-4xl')][1]").text
+                    logger.info(f"Valor arr CLP extraido: {raw_arr_clp}")
+                    raw_arr_uf = driver.find_element(By.XPATH, "//h3[contains(., 'Precio estimado de arriendo')]/following::span[contains(text(), 'UF')][1]").text
+                    logger.info(f"Valor arr UF extraido: {raw_arr_uf}")
+                    
+                    # Asignación
+                    data["tasa_vta_clp"] = clean_clp(raw_vta_clp)
+                    data["tasa_vta_uf"] = clean_uf(raw_vta_uf)
+                    data["tasa_arr_clp"] = clean_clp(raw_arr_clp)
+                    data["tasa_arr_uf"] = clean_uf(raw_arr_uf)
+                    
+                    logger.success(f"     💵 Venta: ${data['tasa_vta_clp']} ({data['tasa_vta_uf']} UF) | Arriendo: ${data['tasa_arr_clp']}")
+                    
+                    # Si llegamos aquí sin errores, salimos del loop y retornamos la data válida
+                    return data 
+
+                except Exception as ex_extract:
+                    logger.warning(f"     ⚠️ Error extrayendo textos del DOM: {ex_extract}")
+                    return data
+
+            else:
+                texto_error = elemento_resultado.text
+                logger.warning(f"   ⚠️ Tasador: No encontrada ({texto_error})")
+                return data # Si no existe, no tiene sentido reintentar
+
+        except UnexpectedAlertPresentException as e:
+            # CAPTURA ESPECÍFICA DE LA ALERTA "Error cargando la información"
+            try:
+                alert = driver.switch_to.alert
+                texto_alerta = alert.text
+                alert.accept()
+                logger.warning(f"   🚨 [Intento {intento}/{MAX_INTENTOS}] Alerta del sitio detectada: '{texto_alerta}'. Reintentando flujo...")
+            except NoAlertPresentException:
+                logger.warning(f"   🚨 [Intento {intento}/{MAX_INTENTOS}] Excepción de alerta disparada, pero la alerta ya no está activa.")
+            
+            time.sleep(2) 
+            continue 
+
+        except Exception as e:
+            logger.error(f"   ⚠️ [Intento {intento}/{MAX_INTENTOS}] Excepción general en tasador: {e}")
+            if intento < MAX_INTENTOS:
+                time.sleep(2)
+                continue
+            else:
+                logger.error("   ❌ Fallaron todos los intentos de tasación.")
+                return data
+
+    return data
 
 # ==============================================================================
 #  WORKER = Basicamente el numero de navegadores que se abren al mismo tiempo
@@ -433,3 +714,45 @@ def ejecutar(ruta_archivo: str, cancel_event, callback_progreso=None) -> bool:
         
     # Pasamos el callback al orquestador
     return orquestador_descargas(clean, cancel_event, callback_progreso=callback_progreso)
+
+
+
+# if __name__ == "__main__":
+#     import threading
+
+#     import sys
+#     import os
+#     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+#     from logger import get_logger
+
+
+#     # Configuración
+#     logger = get_logger("paso0_hp", log_dir="logs", log_file="paso0.log")
+    
+#     # 1. Definir archivo de entrada para la prueba
+#     # Asegúrate de que este archivo exista en la raíz o ajusta la ruta
+#     ARCHIVO_INPUT_TEST = "propiedades.csv" 
+    
+#     # 2. Crear el evento de cancelación (necesario por la firma de la función)
+#     cancel_token = threading.Event()
+
+#     # 3. Callback simple para visualizar progreso en consola
+#     def reporte_progreso(procesados, total):
+#         porcentaje = int((procesados / total) * 100) if total > 0 else 0
+#         print(f"   📊 [Callback] Progreso: {procesados}/{total} ({porcentaje}%)")
+
+#     print(f"🧪 MODO PRUEBA: Ejecutando solo Paso 0 con '{ARCHIVO_INPUT_TEST}'")
+    
+#     if os.path.exists(ARCHIVO_INPUT_TEST):
+#         inicio = time.time()
+        
+#         # Ejecutamos
+#         exitos, fallidos = ejecutar(ARCHIVO_INPUT_TEST, cancel_token, callback_progreso=reporte_progreso)
+        
+#         fin = time.time()
+#         print(f"\n⏱️ Tiempo total: {round(fin - inicio, 2)} segundos")
+#         print(f"✅ Éxitos: {exitos}")
+#         print(f"❌ Fallidos: {len(fallidos)}")
+#     else:
+#         logger.error(f"❌ No se encontró el archivo '{ARCHIVO_INPUT_TEST}' para la prueba.")
+#         print(f"⚠️ Crea un archivo llamado '{ARCHIVO_INPUT_TEST}' en la carpeta del script o edita la variable en el bloque if __name__.")

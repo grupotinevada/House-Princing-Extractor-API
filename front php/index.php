@@ -494,7 +494,8 @@ async function iniciarProcesoManual() {
             pollInterval = setInterval(checkStatus, 2000);
             log(`Tarea manual iniciada: ${currentTaskId}`, "success");
         } else {
-            log(`Error: ${data.detail}`, "error");
+            console.error("Error de validación (422):", data.detail); 
+            log(`Error: ${JSON.stringify(data.detail)}`, "error");
         }
     } catch (e) {
         log(`Error de red: ${e.message}`, "error");

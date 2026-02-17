@@ -10,16 +10,23 @@ from logger import get_logger
 # Configurar logger
 logger = get_logger("paso3_excel", log_dir="logs", log_file="paso3_excel.log")
 
-def generar_excel(lista_datos, cancel_event, nombre_archivo="reporte_final.xlsx", callback_progreso=None):
+# Modificación en la definición: Agregamos crear_excel=True
+def generar_excel(lista_datos, cancel_event, nombre_archivo="reporte_final.xlsx", callback_progreso=None, crear_excel=False ):
     """
-    Genera un Excel Relacional con 5 pestañas:
-    1. 'Resumen General': Datos maestros.
-    2. 'Detalle Construcciones': Desglose de construcción.
-    3. 'Roles Asociados': Lista de roles inscritos en CBR + SU DEUDA ESPECÍFICA.
-    4. 'Deudas TGR': Deudas detectadas SOLO DEL ROL PRINCIPAL.
-    5. 'Comparables Mercado': Data completa de House Pricing.
+    Genera un Excel Relacional con 5 pestañas.
+    Flag crear_excel: Si es False, omite la generación pero retorna True para continuar el flujo.
     """
     total_items = len(lista_datos)
+    
+    # --- SKIP SI EL FLAG ESTÁ APAGADO ---
+    if not crear_excel:
+        logger.info("⏩ Generación de Excel desactivada (flag crear_excel=False). Saltando paso.")
+        # Si hay callback, simulamos que completamos el 100% de este paso para no romper la barra de progreso
+        if callback_progreso:
+            callback_progreso(total_items, total_items)
+        return True
+    # --------------------------------------------------
+
     logger.info(f"📊 Iniciando generación de Excel completo. Total propiedades a procesar: {total_items}")
 
     # Listas para las hojas
@@ -104,7 +111,13 @@ def generar_excel(lista_datos, cancel_event, nombre_archivo="reporte_final.xlsx"
             "Estado Búsqueda HP": estado_hp,
             "Cant. Comparables": num_comps,
             "Latitud Origen": hp_data.get("centro_mapa", {}).get("lat"),
-            "Longitud Origen": hp_data.get("centro_mapa", {}).get("lng")
+            "Longitud Origen": hp_data.get("centro_mapa", {}).get("lng"),
+
+            # --- NUEVO: TASACIONES ---
+            "Tasación Venta CLP": item.get("tasa_vta_clp", 0),
+            "Tasación Venta UF": item.get("tasa_vta_uf", "0"),
+            "Tasación Arriendo CLP": item.get("tasa_arr_clp", 0),
+            "Tasación Arriendo UF": item.get("tasa_arr_uf", "0")
         }
         data_main.append(fila_main)
 
@@ -272,37 +285,43 @@ def generar_excel(lista_datos, cancel_event, nombre_archivo="reporte_final.xlsx"
         return False
 
 def _ajustar_columnas(writer, sheet_name, df, cancel_event):
-    """Función auxiliar para auto-ajustar el ancho de columnas"""
+    """Función auxiliar para auto-ajustar el ancho de columnas (Soporte > 26 cols)"""
+    # IMPORTANTE: Importamos la utilidad para letras de columnas (A, B... AA, AB...)
+    from openpyxl.utils import get_column_letter 
+
     logger.debug(f"   🎨 Ajustando formato (Ancho/Links) en: {sheet_name}")
     worksheet = writer.sheets[sheet_name]
     
     for idx, col in enumerate(df.columns):
         if cancel_event.is_set(): return
         
+        # --- CORRECCIÓN BUG '[' ---
+        # Usamos get_column_letter(idx + 1) en lugar de chr(65 + idx)
+        # Esto convierte el índice 26 en 'AA' correctamente.
+        col_letter = get_column_letter(idx + 1)
+        
         try:
             # Calculamos ancho basado en el contenido
             max_len_data = df[col].astype(str).map(len).max() if not df[col].empty else 0
             max_len = max(max_len_data, len(str(col))) + 2
-            max_len = min(max_len, 60) # Tope máximo para no hacer columnas kilométricas
+            max_len = min(max_len, 60) # Tope máximo
             
-            worksheet.column_dimensions[chr(65 + idx)].width = max_len
+            worksheet.column_dimensions[col_letter].width = max_len
         except Exception as e:
             logger.debug(f"      ⚠️ No se pudo ajustar ancho col {col}: {e}")
             pass
         
         # Detección de Links para formato azul y clickable
         if "Link" in str(col):
-            col_letter = chr(65 + idx)
-            # Iteramos sobre las celdas de esa columna (empezando desde fila 2 porque 1 es header)
             count_links = 0
             for row_idx in range(2, len(df) + 2):
-                cell = worksheet[f"{col_letter}{row_idx}"]
+                cell = worksheet[f"{col_letter}{row_idx}"] # Usamos la letra corregida
                 val = cell.value
                 
                 # Si el valor empieza con http, lo hacemos clickable y azul
                 if val and str(val).startswith("http"):
                     cell.hyperlink = val
-                    cell.style = "Hyperlink" # Estilo nativo de Excel (Azul + Subrayado)
+                    cell.style = "Hyperlink" 
                     count_links += 1
             
             if count_links > 0:
