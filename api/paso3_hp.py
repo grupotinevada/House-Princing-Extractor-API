@@ -21,10 +21,9 @@ def generar_excel(lista_datos, cancel_event, nombre_archivo="reporte_final.xlsx"
     # --- SKIP SI EL FLAG ESTÁ APAGADO ---
     if not crear_excel:
         logger.info("⏩ Generación de Excel desactivada (flag crear_excel=False). Saltando paso.")
-        # Si hay callback, simulamos que completamos el 100% de este paso para no romper la barra de progreso
         if callback_progreso:
             callback_progreso(total_items, total_items)
-        return True
+        return "SKIPPED"
     # --------------------------------------------------
 
     logger.info(f"📊 Iniciando generación de Excel completo. Total propiedades a procesar: {total_items}")

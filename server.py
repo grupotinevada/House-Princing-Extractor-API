@@ -16,9 +16,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 import mysql.connector
 from dotenv import load_dotenv
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 import time
 import utils
+import re
+import unicodedata
+
 
 # --- 1. CONFIGURACIÓN DE RUTAS E IMPORTS ---
 # Definimos la Raíz del Proyecto (Donde está este archivo server.py)
@@ -31,14 +34,40 @@ class PropiedadRequest(BaseModel):
     comuna: str
     direccion: Optional[str] = None
 
+    @field_validator('rol')
+    @classmethod
+    def limpiar_y_validar_rol(cls, v: str) -> str:
+        # 1. Limpieza tolerante: Quitar la palabra "rol", espacios y pasar a mayúsculas
+        v_limpio = v.lower().replace("rol", "").replace(" ", "").strip().upper()
+        
+        # 2. Validación estricta: Debe ser números, un guion, y números o la letra K
+        if not re.match(r'^\d+-[\dK]+$', v_limpio):
+            raise ValueError(f"Formato de Rol inválido ('{v}'). Debe ser 'Manzana-Predio' (ej: 1234-56).")
+        
+        return v_limpio
+
+    @field_validator('comuna')
+    @classmethod
+    def limpiar_y_validar_comuna(cls, v: str) -> str:
+        from utils import COMUNAS_TRADUCTOR
+        # 1. La "jugera": convierte "ÑUÑOA", "ñuñoa", "Nunoa" -> "nunoa"
+        v_norm = unicodedata.normalize('NFKD', v).encode('ASCII', 'ignore').decode('utf-8').lower().strip()
+        
+        # 2. Buscamos si "nunoa" existe en el diccionario de utils.py
+        if v_norm not in utils.COMUNAS_TRADUCTOR:
+            raise ValueError(f"La comuna '{v}' no es reconocida en nuestro sistema. Verifique la ortografía.")
+        
+        # 3. Retornamos la versión perfecta desde utils para que Selenium nunca falle.
+        return utils.COMUNAS_TRADUCTOR[v_norm]
+
 def get_db_connection():
     try:
         return mysql.connector.connect(
-            host=os.getenv("DB_HOST", "localhost"),
-            port=int(os.getenv("DB_PORT", 3306)),
-            user=os.getenv("DB_USER", "root"),
-            password=os.getenv("DB_PASSWORD", ""),
-            database=os.getenv("DB_NAME", "house_pricing_db")
+            host=os.getenv("DB_HOST"),
+            port=int(os.getenv("DB_PORT")),
+            user=os.getenv("DB_USER"),
+            password=os.getenv("DB_PASSWORD"),
+            database=os.getenv("DB_NAME")
         )
     except Exception as e:
         print(f"Error DB: {e}")
@@ -110,6 +139,7 @@ def ejecutar_proceso_background(task_id: str, file_path: str, cancel_event: thre
         tasks[task_id]["message"] = "⏳ Servidor ocupado. Tu tarea está en cola de espera..."
         tasks[task_id]["progress"] = 0
         tasks[task_id]["stats"] = {}
+        tasks[task_id]["errores_parciales"] = []
 
     logger.info(f"🚦 [API] Tarea {task_id} esperando su turno...")
 
@@ -129,7 +159,7 @@ def ejecutar_proceso_background(task_id: str, file_path: str, cancel_event: thre
             time.sleep(2)
 
     # Definimos el callback que main_hp llamará para reportar progreso
-    def progress_callback_api(porcentaje, mensaje):
+    def progress_callback_api(porcentaje, mensaje, errores_nuevos=None):
         if task_id in tasks:
             # Si recibimos señal de cancelación, forzamos estado
             if cancel_event.is_set():
@@ -138,7 +168,12 @@ def ejecutar_proceso_background(task_id: str, file_path: str, cancel_event: thre
 
             tasks[task_id]["progress"] = round(porcentaje, 1)
             tasks[task_id]["message"] = mensaje
-            
+
+            if errores_nuevos:
+                if "errores_parciales" not in tasks[task_id]:
+                    tasks[task_id]["errores_parciales"] = []
+                tasks[task_id]["errores_parciales"].extend(errores_nuevos)
+
             # Log de hitos importantes para no saturar la consola del server
             if porcentaje == 0 or porcentaje == 25 or porcentaje == 50 or porcentaje == 75 or porcentaje == 100:
                 logger.info(f"📊 Task {task_id}: {porcentaje}% - {mensaje}")
@@ -184,8 +219,7 @@ def ejecutar_proceso_background(task_id: str, file_path: str, cancel_event: thre
                 tasks[task_id]["progress"] = 100
                 tasks[task_id]["message"] = "Proceso finalizado exitosamente."
                 
-                # Intentamos buscar el archivo solo para habilitar el botón de descarga,
-                # pero si falla, NO marcamos error en la tarea.
+                # Intentamos buscar el archivo solo para habilitar el botón de descarga
                 try:
                     list_of_files = glob.glob(os.path.join(OUTPUT_DIR, '*.xlsx'))
                     if list_of_files:
@@ -193,24 +227,19 @@ def ejecutar_proceso_background(task_id: str, file_path: str, cancel_event: thre
                         tasks[task_id]["result_file"] = latest_file
                         logger.info(f"✅ [API] Archivo vinculado: {os.path.basename(latest_file)}")
                     else:
-                        logger.warning(f"⚠️ Proceso OK, pero no se detectó el Excel automáticamente en {OUTPUT_DIR}")
+                        logger.warning(f"⚠️ Proceso OK. No se vinculó Excel (probablemente desactivado).")
                 except Exception as e:
                     logger.warning(f"⚠️ Error menor buscando archivo de salida: {e}")
-                else:
-                    tasks[task_id]["status"] = "error"
-                    tasks[task_id]["message"] = "El proceso terminó OK, pero no se encontró el Excel generado."
-                    logger.error(f"❌ [API] Tarea {task_id} terminó sin archivo de salida en {OUTPUT_DIR}.")
             
             else:
                 tasks[task_id]["status"] = "error"
                 tasks[task_id]["message"] = "El proceso reportó un fallo interno (ver logs de lógica)."
 
-                
-
         except Exception as e:
             logger.error(f"❌ [API] Excepción no controlada en Task {task_id}: {e}", exc_info=True)
             tasks[task_id]["status"] = "error"
-            tasks[task_id]["message"] = f"Error interno del servidor: {str(e)}"
+            # MODIFICACIÓN: Mostrar el mensaje limpio de la excepción
+            tasks[task_id]["message"] = str(e)
             utils.matar_procesos_zombies()
 
         finally:
@@ -222,7 +251,7 @@ def ejecutar_proceso_background(task_id: str, file_path: str, cancel_event: thre
                 try:
                     os.remove(file_path)
                 except: 
-                    pass
+                    pass            
     # === FIN DEL SISTEMA DE COLA (Se libera el semáforo automáticamente) ===
 
 
@@ -231,7 +260,7 @@ def ejecutar_proceso_background(task_id: str, file_path: str, cancel_event: thre
 @app.get("/health")
 def health_check():
     """Endpoint para verificar que la API está viva"""
-    return {"status": "online", "system": sys.platform, "root": BASE_DIR}
+    return {"status": "online", "system": sys.platform}
 
 @app.post("/upload-process")
 async def upload_and_process(file: UploadFile = File(...), background_tasks: BackgroundTasks = None):
@@ -330,7 +359,8 @@ def get_status(task_id: str):
         "status": task["status"],
         "progress": task["progress"],
         "message": task.get("message", ""),
-        "system_stats": task.get("stats", {})
+        "system_stats": task.get("stats", {}),
+        "errores_parciales": task.get("errores_parciales", [])
     }
 
 @app.get("/download/{task_id}")

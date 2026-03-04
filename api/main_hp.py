@@ -89,7 +89,7 @@ def calcular_progreso_global(paso_idx, items_procesados, total_items, callback):
         nombres_pasos = ["Descargando", "Extrayendo PDF", "Buscando Precios", "Generando Excel", "Guardando en BD"]
         mensaje = f"{nombres_pasos[idx]} ({items_procesados}/{total_items})"
         
-        callback(round(total_global, 1), mensaje)
+        callback(round(total_global, 1), mensaje, None)
 
 
 # CORRECCIÓN: Agregar cancel_event
@@ -140,8 +140,14 @@ def main(cancel_event, ruta_lista=None, progress_callback=None):
                 logger.error(mensaje_error)
                 # AL LANZAR ESTA EXCEPCIÓN, server.py la captura y la pone en el JSON 'message'
                 raise Exception(mensaje_error)
-
-        logger.info("✅ Paso 0 completado. PDFs listos en carpeta de entrada.")
+        
+        if lista_fallidos and cant_exitos > 0:
+            errores_p0 = [{"rol": f.get('rol', 'Desconocido'), "paso": "Descarga PDF", "motivo": f.get('motivo_error', 'Fallo en descarga')} for f in lista_fallidos]
+            if progress_callback:
+                progress_callback(25, f"Descargas listas. {len(lista_fallidos)} fallaron.", errores_p0)
+            logger.warning(f"⚠️ Paso 0 completado con {len(lista_fallidos)} fallos.")
+        else:
+            logger.info("✅ Paso 0 completado. PDFs listos en carpeta de entrada.")
 
     # ------------------------------------------------------------------
     # PASO 1: Procesar PDFs (25% - 50%)
@@ -159,9 +165,11 @@ def main(cancel_event, ruta_lista=None, progress_callback=None):
     if not json_propiedades:
         if cancel_event.is_set():
             logger.warning("Proceso cancelado en Paso 1.")
+            return
         else:
-            logger.error("❌ No se generó ningún JSON válido en el Paso 1. Abortando.")
-        return
+            mensaje_error = "❌ No se generó ningún JSON válido en el Paso 1. Abortando."
+            logger.error(mensaje_error)
+            raise Exception(mensaje_error)
 
     logger.info(f"✅ Paso 1 completado. {len(json_propiedades)} propiedades extraídas.")
     
@@ -181,11 +189,26 @@ def main(cancel_event, ruta_lista=None, progress_callback=None):
     # Pasar cancel_event y callback
     json_enriquecido = paso2_hp.procesar_lista_propiedades(json_propiedades, cancel_event, callback_progreso=cb_paso2)
 
-    if cancel_event.is_set() or not json_enriquecido:
-        logger.warning("Paso 2 cancelado o sin resultados.")
+    if cancel_event.is_set():
+        logger.warning("Paso 2 cancelado por usuario.")
         return
-
-    logger.info(f"✅ Paso 2 completado. Datos enriquecidos con comparables.")
+    if not json_enriquecido:
+        mensaje_error = "❌ El Paso 2 terminó sin resultados válidos."
+        logger.error(mensaje_error)
+        raise Exception(mensaje_error)
+    errores_p2 = []
+    for prop in json_enriquecido:
+        estado_hp = prop.get("house_pricing", {}).get("comparables", [])
+        # Si 'comparables' es un string, significa que hubo un error o no hay resultados
+        if isinstance(estado_hp, str) and ("Error" in estado_hp or "Sin resultados" in estado_hp):
+            rol_fallido = prop.get("informacion_general", {}).get("rol", "S/R")
+            errores_p2.append({"rol": rol_fallido, "paso": "Búsqueda HP", "motivo": estado_hp})
+            
+    if errores_p2 and progress_callback:
+        progress_callback(75, f"Scraping listo. {len(errores_p2)} sin resultados o con error.", errores_p2)
+        logger.warning(f"⚠️ Paso 2 completado con {len(errores_p2)} advertencias.")
+    else:
+        logger.info(f"✅ Paso 2 completado. Datos enriquecidos con comparables.")
 
     with open(TEMP_JSON_FINAL, "w", encoding="utf-8") as f:
         json.dump(json_enriquecido, f, indent=4, ensure_ascii=False)
@@ -222,6 +245,8 @@ def main(cancel_event, ruta_lista=None, progress_callback=None):
 
     logger.info("✅ Paso 4 completado.")
     
+# Reemplaza desde "if exito_excel:" hasta el final del archivo por esto:
+
     if exito_excel:
         logger.info(">>> FINALIZANDO: Moviendo archivos y limpieza...")
         
@@ -236,7 +261,9 @@ def main(cancel_event, ruta_lista=None, progress_callback=None):
         ruta_final_excel = os.path.join(OUTPUT_FOLDER, f"{base_name}.xlsx")
 
         try:
-            if os.path.exists(TEMP_EXCEL):
+            if exito_excel == "SKIPPED":
+                logger.info("⏩ Se omitió la creación del Excel por configuración. Solo se guardará el JSON.")
+            elif exito_excel is True and os.path.exists(TEMP_EXCEL):
                 shutil.move(TEMP_EXCEL, ruta_final_excel)
                 logger.info(f"📂 Excel guardado en: {ruta_final_excel}")
             
@@ -251,23 +278,35 @@ def main(cancel_event, ruta_lista=None, progress_callback=None):
             
             # Bloque seguro para Linux/API (No intentar abrir GUI)
             try:
-                if os.name == 'nt': # Solo en Windows
+                if os.name == 'nt' and exito_excel is True: # Solo intentar abrir si realmente se creó
                     os.startfile(ruta_final_excel)
             except:
                 pass
+            
+            # --- CORRECCIÓN: Retornamos True explícitamente al servidor ---
+            return True
 
         except Exception as e:
-            logger.error(f"❌ Error moviendo archivos finales: {e}")
+            # --- CORRECCIÓN: Si falla al mover el archivo (ej: Excel lo tiene bloqueado), la API debe saberlo ---
+            mensaje_error = f"❌ Error guardando los archivos finales: {e}"
+            logger.error(mensaje_error)
+            raise Exception(mensaje_error)
 
     else:
         if cancel_event.is_set():
             logger.warning("Proceso cancelado en Paso 3.")
+            return
         else:
-            logger.error("❌ El Paso 3 falló generando el Excel. Revisa los logs.")
+            # --- CORRECCIÓN: La excepción del Paso 3 ahora está en el lugar correcto ---
+            mensaje_error = "❌ El Paso 3 falló generando el Excel."
+            logger.error(mensaje_error)
+            raise Exception(mensaje_error)
 
+# --- CORRECCIÓN: Bloque Main restaurado a la normalidad ---
 if __name__ == "__main__":
     if not os.path.exists(CARPETA_PDFS):
         os.makedirs(CARPETA_PDFS)
-    else:
-        import threading
-        main(threading.Event())
+    
+    import threading
+    # Solo para pruebas locales de main_hp.py
+    main(threading.Event())

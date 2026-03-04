@@ -2,10 +2,10 @@ import os
 import time
 import pandas as pd
 import glob
-import shutil  # Necesario para mover entre carpetas en paralelo
-import math    # Necesario para dividir los lotes
+import shutil
+import math
 from typing import List, Dict, Any, Optional
-from concurrent.futures import ThreadPoolExecutor # Para paralelismo
+from concurrent.futures import ThreadPoolExecutor
 
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -286,6 +286,7 @@ def _descargar_pdf_individual(driver, wait, item, carpeta_temporal):
         logger.debug(f" buscando elemento por ID")
         input_rol.clear()
         logger.debug(f" limpiando campo:")
+        rol = "-".join([p.lstrip("0") or "0" for p in str(rol).replace("−", "-").replace("–", "-").replace("—", "-").split("-")])
         input_rol.send_keys(rol)
         logger.debug(f" ingresando rol: {rol}")
 
@@ -310,6 +311,13 @@ def _descargar_pdf_individual(driver, wait, item, carpeta_temporal):
                 
         except TimeoutException:
             logger.warning("   ⚠️ El sitio no respondió a la búsqueda (Timeout validación).")
+            try:
+                timestamp = int(time.time())
+                screenshot_path = f"debug_timeout_{comuna}_{rol}_{timestamp}.png".replace(" ", "_").replace("/", "-")
+                driver.save_screenshot(screenshot_path)
+                logger.warning(f"   📸 Screenshot del error guardado en: {screenshot_path}")
+            except Exception as e_foto:
+                logger.error(f"   ❌ No se pudo tomar screenshot del timeout: {e_foto}")
             return False
 
         # PASO 5: Esperar botón Generar
