@@ -132,13 +132,10 @@ def main(cancel_event, ruta_lista=None, progress_callback=None):
                     # CASO 3: Error técnico (Timeout, Login, etc)
                     motivo = lista_fallidos[0].get('motivo_error', 'Desconocido')
                     mensaje_error = f"❌ Error técnico en descargas: {motivo}."
-            else:
-                # --- NUEVO: CASO 4: Archivo vacío o extensión inválida (.txt) ---
-                mensaje_error = "❌ Error técnico: Archivo no soportado o sin datos válidos."
 
             if cancel_event.is_set():
                 logger.warning("Proceso cancelado en Paso 0.")
-                return
+                return 
             else:
                 logger.error(mensaje_error)
                 # AL LANZAR ESTA EXCEPCIÓN, server.py la captura y la pone en el JSON 'message'
@@ -195,46 +192,27 @@ def main(cancel_event, ruta_lista=None, progress_callback=None):
     if cancel_event.is_set():
         logger.warning("Paso 2 cancelado por usuario.")
         return
-    
     if not json_enriquecido:
         mensaje_error = "❌ El Paso 2 terminó sin resultados válidos."
         logger.error(mensaje_error)
         raise Exception(mensaje_error)
-    
-    json_limpio = []
     errores_p2 = []
-
     for prop in json_enriquecido:
-        rol_actual = prop.get("informacion_general", {}).get("rol", "S/R")
-        
-        if prop.get("FATAL_ERROR_DATA"):
-            motivo = prop.get("motivo_error", "Error crítico en extracción de datos esenciales.")
-            logger.warning(f"⛔ Aduana bloqueó el rol {rol_actual}: {motivo}")
-            errores_p2.append({"rol": rol_actual, "paso": "Extracción HP", "motivo": motivo})
-            continue
-
         estado_hp = prop.get("house_pricing", {}).get("comparables", [])
+        # Si 'comparables' es un string, significa que hubo un error o no hay resultados
         if isinstance(estado_hp, str) and ("Error" in estado_hp or "Sin resultados" in estado_hp):
-            errores_p2.append({"rol": rol_actual, "paso": "Búsqueda HP", "motivo": estado_hp})
-        
-        json_limpio.append(prop)
-        
-    if not json_limpio:
-        mensaje_error = "❌ Ninguna propiedad del lote superó la Aduana de Datos"
-        logger.error(mensaje_error)
-        raise Exception(mensaje_error)
-    
+            rol_fallido = prop.get("informacion_general", {}).get("rol", "S/R")
+            errores_p2.append({"rol": rol_fallido, "paso": "Búsqueda HP", "motivo": estado_hp})
+            
     if errores_p2 and progress_callback:
-        progress_callback(75, f"Scraping listo. {len(json_limpio)} válidos, {len(errores_p2)} bloqueados/sin resultados.", errores_p2)
-        logger.warning(f"⚠️ Paso 2 completado con {len(errores_p2)} bloqueos o advertencias.")
+        progress_callback(75, f"Scraping listo. {len(errores_p2)} sin resultados o con error.", errores_p2)
+        logger.warning(f"⚠️ Paso 2 completado con {len(errores_p2)} advertencias.")
     else:
-        logger.info(f"✅ Paso 2 completado. {len(json_limpio)} propiedades perfectas listas para DB/Excel.")
+        logger.info(f"✅ Paso 2 completado. Datos enriquecidos con comparables.")
 
     with open(TEMP_JSON_FINAL, "w", encoding="utf-8") as f:
-        # ATENCIÓN: Guardamos solo la lista limpia
-        json.dump(json_limpio, f, indent=4, ensure_ascii=False)
+        json.dump(json_enriquecido, f, indent=4, ensure_ascii=False)
 
-    json_enriquecido = json_limpio
     # ------------------------------------------------------------------
     # PASO 3: Generar Excel (75% - 100%)
     # ------------------------------------------------------------------

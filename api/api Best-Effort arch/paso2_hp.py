@@ -275,10 +275,12 @@ def _buscar_propiedad_individual(driver, wait, comuna_nombre, tipo_target, rol_t
                 
                 try:
                     # 1. Seleccionar la fuente (Esto TAMBIÉN refresca la lista, ojo)
+                    
                     select_elem = wait.until(EC.element_to_be_clickable((By.ID, "fuente")))
                     Select(select_elem).select_by_value(fuente_val)
                     
-                    # Esperamos recarga
+                    # Esperamos recarga (Idealmente usar staleness aquí también, 
+                    # pero un sleep de 3s suele bastar para el cambio de filtro secundario)
                     logger.debug(f"     ⏳ Esperando recarga de filtro {fuente_val}...")
                     time.sleep(3) 
 
@@ -292,48 +294,26 @@ def _buscar_propiedad_individual(driver, wait, comuna_nombre, tipo_target, rol_t
                         logger.debug("     ℹ️ No se encontró selector de orden.")
                         pass 
                     
-                    #3. Parsear (Extrae todas las cards cargadas en la web, ej: 50 propiedades)
+                    # 3. Parsear
                     propiedades_raw = parse_propiedades(driver.page_source, cancel_event, fuente_val)
                     
-                    # --- FILTRO ESTRICTO DE LINKS ---
-                    if propiedades_raw and fuente_val == "Ofertas":
-                        con_link = [p for p in propiedades_raw if p.get("link_publicacion") and p["link_publicacion"] != "No hay dato, Ver publicacion"]
-                        
-                        # Si es Oferta, trajo cards, pero NINGUNA tiene link -> DOM Incompleto
-                        if len(con_link) == 0:
-                            logger.error(f"     ❌ [DOM INCOMPLETO] {len(propiedades_raw)} cards en Ofertas pero NINGUNA tiene link. Forzando recarga.")
-                            raise Exception("DOM_INCOMPLETO_LINK_FALTANTE")
-                        
-                        descartadas = len(propiedades_raw) - len(con_link)
-                        if descartadas > 0:
-                            logger.warning(f"     ⚠️ Se omitieron {descartadas} propiedades sin link en Ofertas.")
-                            
-                        propiedades_raw = con_link
-                    # --------------------------------------------------
-
-                    # 4. Calcular distancias (Se aplica solo a las sobrevivientes válidas)
+                    # 4. Calcular distancias
                     if datos_retorno["lat_centro"]:
-                        logger.debug(f"     📐 Calculando distancias para {len(propiedades_raw)} propiedades válidas...")
+                        logger.debug(f"     📐 Calculando distancias para {len(propiedades_raw)} propiedades...")
                         for p in propiedades_raw:
                             p['distancia_metros'] = calcular_distancia(
                                 datos_retorno["lat_centro"], datos_retorno["lng_centro"], 
                                 p['lat'], p['lng']
                             )
-                        # Ordenamos de la más cercana a la más lejana
                         propiedades_raw = sorted(propiedades_raw, key=lambda x: x.get('distancia_metros', 999999))
                     
-                    # 5. Cortar las mejores 10 (Garantiza 10 propiedades SÍ O SÍ con link, si hay disponibles)
+                    # 5. Cortar mejores 10
                     mejores_10 = propiedades_raw[:10]
                     lista_total.extend(mejores_10)
                     
-                    logger.success(f"     📥 Se agregaron {len(mejores_10)} propiedades válidas (Top 10 más cercanas) de {fuente_val}")
+                    logger.success(f"     📥 Se agregaron {len(mejores_10)} propiedades (Top 10 más cercanas) de {fuente_val}")
 
                 except Exception as e:
-                    # --- NUEVO MANEJO DE ERROR ---
-                    # Si es nuestro error de DOM incompleto, lo lanzamos hacia arriba para forzar el reintento del rol.
-                    if "DOM_INCOMPLETO" in str(e):
-                        raise
-                    # Si es otro error menor, lo logueamos y seguimos con la otra fuente.
                     logger.error(f"     ❌ Error procesando fuente {fuente_val}: {e}", exc_info=True)
             
             datos_retorno["resultados"] = lista_total
@@ -421,13 +401,8 @@ def procesar_lote_worker(id_worker, sublista_propiedades, cancel_event, callback
                 if callback_progreso: callback_progreso()
                 continue
             
-            resultado_hp = {
-                "lat_centro": None, "lng_centro": None, 
-                "resultados": [], 
-                "mensaje": "Iniciando"
-            }
+            resultado_hp = None
             MAX_INTENTOS = 3
-            exito_rol = False
 
             for intento in range(MAX_INTENTOS):
                 if cancel_event.is_set(): break
@@ -435,19 +410,11 @@ def procesar_lote_worker(id_worker, sublista_propiedades, cancel_event, callback
                     # Intento de búsqueda
                     resultado_hp = _buscar_propiedad_individual(driver, wait, comuna, tipo, rol, cancel_event)
                     mensaje = resultado_hp.get("mensaje", "")
-                    
                     if "Error" in mensaje or "Timeout" in mensaje:
                         raise Exception(mensaje) # Forzamos el salto al 'except' para reintentar
                     
-                    if "Sin resultados" in mensaje:
-                        exito_rol = True
-                        break
-                    if not resultado_hp.get("resultados") and mensaje == "OK":
-                        raise Exception("Extracción sin resultados y sin mensaje de validación. Forzando reintento.")
-                    
-                    exito_rol = True
+                    # Si llegamos aquí, fue ÉXITO (o sin resultados, pero válido)
                     break
-
                 
                 except Exception as e:
                     # Capturamos TimeoutException y otros errores de red
@@ -460,23 +427,21 @@ def procesar_lote_worker(id_worker, sublista_propiedades, cancel_event, callback
                         except: 
                             pass
                     else:
-                        logger.error(f"💀 [Worker-{id_worker}] Fallo definitivo para {rol} tras {MAX_INTENTOS} intentos. Motivo final: {e}")
-                        resultado_hp["mensaje"] = f"Error Técnico Persistente: {str(e)}"
-                        exito_rol = False
-            if not exito_rol:
-                # Inyectamos esta bandera para que main_hp.py la intercepte y lo saque de la BD
-                item["FATAL_ERROR_DATA"] = True
-                item["motivo_error"] = resultado_hp["mensaje"]
-                logger.warning(f"🚫 [Worker-{id_worker}] Rol {rol} marcado con FATAL_ERROR_DATA. Será excluido de la BD.")
+                        logger.error(f"💀 [Worker-{id_worker}] Fallo definitivo para {rol} tras {MAX_INTENTOS} intentos.")
+                        resultado_hp = {
+                            "lat_centro": None, "lng_centro": None, 
+                            "resultados": [], 
+                            "mensaje": f"Error Técnico Persistente: {str(e)}"
+                        }
 
-            valor_comparables = resultado_hp.get("resultados", [])
+            valor_comparables = resultado_hp["resultados"]
             if not valor_comparables:
                 valor_comparables = resultado_hp.get("mensaje", "Sin resultados")
 
             item["house_pricing"] = {
                 "centro_mapa": {
-                    "lat": resultado_hp.get("lat_centro"),
-                    "lng": resultado_hp.get("lng_centro")
+                    "lat": resultado_hp["lat_centro"],
+                    "lng": resultado_hp["lng_centro"]
                 },
                 "comparables": valor_comparables
             }
@@ -484,7 +449,7 @@ def procesar_lote_worker(id_worker, sublista_propiedades, cancel_event, callback
             lista_worker_enriquecida.append(item)
             if callback_progreso: 
                 callback_progreso()
-            time.sleep(1)
+            time.sleep(1) 
 
     except Exception as e:
         logger.error(f"💀 [Worker-{id_worker}] Error crítico: {e}", exc_info=True)
