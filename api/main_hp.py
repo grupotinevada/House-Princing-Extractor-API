@@ -206,6 +206,13 @@ def main(cancel_event, ruta_lista=None, progress_callback=None):
 
     for prop in json_enriquecido:
         rol_actual = prop.get("informacion_general", {}).get("rol", "S/R")
+        tasa_uf = prop.get("tasa_vta_uf", 0)
+
+        if not tasa_uf or str(tasa_uf).strip() in ["0", "0.0", ""]:
+            motivo = "Propiedad sin Tasación capturada (Fallo en origen o valor 0)."
+            logger.warning(f"⛔ Aduana bloqueó el rol {rol_actual}: {motivo}")
+            errores_p2.append({"rol": rol_actual, "paso": "Validación Tasación", "motivo": motivo})
+            continue # Se descarta, NO llegará a la Base de Datos
         
         if prop.get("FATAL_ERROR_DATA"):
             motivo = prop.get("motivo_error", "Error crítico en extracción de datos esenciales.")
@@ -261,15 +268,22 @@ def main(cancel_event, ruta_lista=None, progress_callback=None):
     # Inyectamos usando el JSON enriquecido del Paso 2
     exito_bd = paso4_hp.insertar_datos(json_enriquecido, cancel_event, callback_progreso=cb_paso4)
 
+    # --- CORRECCIÓN PUNTO 4: VALIDACIÓN ESTRICTA Y ERROR AL FRONT ---
     if not exito_bd:
-        logger.error("⚠️ Hubo errores guardando en la Base de Datos (ver logs), pero el Excel se generó correctamente.")
-        # No hacemos return aquí para permitir que el usuario descargue el Excel aunque falle la BD.
+        mensaje_error = "❌ Error crítico: Falló la inyección en la BD (Rollback ejecutado)."
+        logger.error(mensaje_error)
+        raise Exception(mensaje_error)
 
     logger.info("✅ Paso 4 completado.")
     
 # Reemplaza desde "if exito_excel:" hasta el final del archivo por esto:
 
     if exito_excel:
+        # --- CORRECCIÓN PUNTO 3: PREVENIR FALSA CANCELACIÓN EXITOSA ---
+        if cancel_event.is_set():
+            logger.warning("Proceso cancelado justo antes de finalizar.")
+            return False
+
         logger.info(">>> FINALIZANDO: Moviendo archivos y limpieza...")
         
         if not os.path.exists(OUTPUT_FOLDER):

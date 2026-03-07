@@ -149,6 +149,45 @@ def extraer_direccion_y_link(raw_name, raw_display_name):
         link = None 
         return direccion, link
 
+def aplicar_filtro_ofertas_publicadas(driver, wait):
+    """
+    Abre el panel lateral de filtros, selecciona 'Publicado' -> 'Sí' y aplica los cambios.
+    Exclusivo para la sección de Ofertas.
+    """
+    logger.info("     ⚙️ Aplicando filtro adicional: Solo Ofertas 'Publicadas' activamente...")
+    try:
+        # 1. Abrir panel de filtros
+        btn_filtros = wait.until(EC.element_to_be_clickable((By.ID, "filters-panel-open-button")))
+        driver.execute_script("arguments[0].click();", btn_filtros)
+        time.sleep(1) # Espera a que termine la animación CSS del panel lateral
+        
+        # 2. Seleccionar 'Publicado' = Sí (value '1')
+        select_publicado_elem = wait.until(EC.presence_of_element_located((By.ID, "publicado")))
+        Select(select_publicado_elem).select_by_value("1")
+        
+        # Identificamos la lista actual para rastrear cuándo se refresca
+        try:
+            lista_vieja = driver.find_element(By.ID, "property_list")
+        except:
+            lista_vieja = None
+
+        # 3. Clic en Aplicar filtros (Buscado por su atributo onclick único)
+        btn_aplicar = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[@onclick='applyFiltersPanel()']")))
+        driver.execute_script("arguments[0].click();", btn_aplicar)
+        
+        # 4. Sincronización: Esperar recarga HTMX
+        if lista_vieja:
+            wait.until(EC.staleness_of(lista_vieja))
+        
+        wait.until(EC.presence_of_element_located((By.ID, "property_list")))
+        time.sleep(2) # Respiro para que el DOM pinte las nuevas cards
+        
+        logger.debug("     ✅ Filtro de 'Publicado' aplicado exitosamente.")
+        
+    except Exception as e:
+        # Si falla (cambió el HTML o el sitio anda lento), no matamos el script, solo advertimos
+        logger.warning(f"     ⚠️ No se pudo aplicar el filtro de 'Publicado'. Continuando con lista estándar. Detalle: {e}")
+
 
 def _buscar_propiedad_individual(driver, wait, comuna_nombre, tipo_target, rol_target, cancel_event):
     from selenium.common.exceptions import TimeoutException
@@ -291,7 +330,10 @@ def _buscar_propiedad_individual(driver, wait, comuna_nombre, tipo_target, rol_t
                     except:
                         logger.debug("     ℹ️ No se encontró selector de orden.")
                         pass 
-                    
+
+                    if fuente_val == "Ofertas":
+                        aplicar_filtro_ofertas_publicadas(driver, wait) # Solo para Ofertas, aplicamos el filtro extra de "Publicado = Sí"
+
                     #3. Parsear (Extrae todas las cards cargadas en la web, ej: 50 propiedades)
                     propiedades_raw = parse_propiedades(driver.page_source, cancel_event, fuente_val)
                     
@@ -361,8 +403,8 @@ def procesar_lote_worker(id_worker, sublista_propiedades, cancel_event, callback
     logger.info(f"👷 [Worker-{id_worker}] Iniciando sesión Selenium...")
     
     options = Options()
-    options.add_argument("--headless=new")
-    options.add_argument("--disable-gpu")
+    # options.add_argument("--headless=new")
+    # options.add_argument("--disable-gpu")
     options.add_argument("--disable-extensions")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--no-sandbox")

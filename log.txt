@@ -1,0 +1,1378 @@
+12:57:13 | paso2_hp | [INFO]     | ⚙️ Configuración cargada. Usuario: barbara@grupohouse.cl | Workers: 2
+C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\server.py:261: DeprecationWarning:
+        on_event is deprecated, use lifespan event handlers instead.
+
+        Read more about it in the
+        [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+
+  @app.on_event("startup")
+12:57:13 | server_api | [INFO]     | 🌍 Iniciando Servidor API House Pricing...
+INFO:     Started server process [37892]
+INFO:     Waiting for application startup.
+12:57:14 | server_api | [INFO]     | Iniciando validación de sistema (BD y Variables)...
+12:57:14 | server_api | [INFO]     | ✅ Validaciones de inicio exitosas. API lista.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8181 (Press CTRL+C to quit)
+INFO:     127.0.0.1:36940 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:17006 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:17008 - "POST /process-json HTTP/1.1" 200 OK
+12:58:12 | server_api | [INFO]     | 🚀 [API] Iniciando tarea d58ae1b7-0718-40bd-af17-51b689d6c4c5 con archivo: C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\uploads\d58ae1b7-0718-40bd-af17-51b689d6c4c5_data.csv
+12:58:12 | server_api | [INFO]     | 🚦 [API] Tarea d58ae1b7-0718-40bd-af17-51b689d6c4c5 esperando su turno...
+12:58:12 | server_api | [INFO]     | 🟢 [API] Turno concedido a d58ae1b7-0718-40bd-af17-51b689d6c4c5. Iniciando...
+12:58:12 | server_api | [INFO]     | 📊 [MONITOR d58a] RAM: 111.66MB (45.2%) | CPU: 0.0% | Chrome Zombies: 0
+12:58:12 | main_hp | [INFO]     | === INICIO DEL FLUJO DE TASACIÓN ===
+12:58:12 | main_hp | [INFO]     | >>> EJECUTANDO PASO 0: Descarga automática desde C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\uploads\d58ae1b7-0718-40bd-af17-51b689d6c4c5_data.csv...
+12:58:12 | paso0_hp | [INFO]     | === PASO 0: INICIO DEL FLUJO DE DESCARGAS ===
+12:58:12 | paso0_hp | [INFO]     | 📂 Archivo de entrada: C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\uploads\d58ae1b7-0718-40bd-af17-51b689d6c4c5_data.csv
+12:58:12 | paso0_hp | [INFO]     | 📂 Intentando cargar archivo origen: C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\uploads\d58ae1b7-0718-40bd-af17-51b689d6c4c5_data.csv
+12:58:12 | paso0_hp | [DEBUG]     |    📄 Formato detectado: CSV
+12:58:12 | paso0_hp | [INFO]     |    ✅ Archivo cargado. Filas encontradas: 1
+12:58:12 | paso0_hp | [DEBUG]     | 🧹 Estandarizando y limpiando datos de entrada...
+12:58:12 | paso0_hp | [INFO]     | ✅ Datos listos para procesar: 1 propiedades.
+12:58:12 | paso0_hp | [INFO]     | 🚀 Iniciando ciclo de descargas PARALELO para 1 propiedades. WORKERS=2
+12:58:12 | paso0_hp | [INFO]     | 🔧 Configurando Driver Chrome (Opciones y Preferencias - Modo Ahorro)...
+12:58:12 | paso0_hp | [DEBUG]     |    📂 Carpeta de descargas configurada: C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\input_pdfs\temp_1
+12:58:12 | paso0_hp | [DEBUG]     | informacion de configuracion del driver: <selenium.webdriver.chrome.options.Options object at 0x0000027B854DE660>
+12:58:13 | paso0_hp | [INFO]     | 🔐 Iniciando proceso de Login...
+12:58:13 | paso0_hp | [DEBUG]     |    ⌨️ Ingresando credenciales...
+12:58:14 | server_api | [INFO]     | 📊 [MONITOR d58a] RAM: 482.21MB (45.9%) | CPU: 0.0% | Chrome Zombies: 8
+12:58:14 | server_api | [INFO]     | 🛑 Solicitud de cancelación recibida para d58ae1b7-0718-40bd-af17-51b689d6c4c5
+INFO:     127.0.0.1:64915 - "POST /cancel/d58ae1b7-0718-40bd-af17-51b689d6c4c5 HTTP/1.1" 200 OK
+12:58:14 | paso0_hp | [DEBUG]     |    ⏳ Esperando redirección post-login...
+12:58:16 | server_api | [INFO]     | 📊 [MONITOR d58a] RAM: 670.34MB (46.2%) | CPU: 0.0% | Chrome Zombies: 11
+INFO:     127.0.0.1:5507 - "POST /process-json HTTP/1.1" 422 Unprocessable Content
+12:58:16 | paso0_hp | [SUCCESS]     | ✅ Login exitoso. Sesión iniciada.
+12:58:18 | server_api | [INFO]     | 📊 [MONITOR d58a] RAM: 114.86MB (45.3%) | CPU: 0.0% | Chrome Zombies: 0
+INFO:     127.0.0.1:41108 - "POST /process-json HTTP/1.1" 422 Unprocessable Content
+12:58:19 | paso0_hp | [INFO]     | ============================================================
+12:58:19 | paso0_hp | [INFO]     | 📊 REPORTE FINAL DE DESCARGAS
+12:58:19 | paso0_hp | [INFO]     |    - Total Intentados: 1
+12:58:19 | paso0_hp | [INFO]     |    - Descargados OK:   0
+12:58:19 | paso0_hp | [INFO]     |    - Fallidos:         0
+12:58:19 | paso0_hp | [INFO]     | ============================================================
+12:58:19 | paso0_hp | [INFO]     | ============================================================
+12:58:19 | paso0_hp | [SUCCESS]     | 🏁 Proceso finalizado. Descargas exitosas: 0/1
+12:58:19 | main_hp | [WARNING]     | Proceso cancelado en Paso 0.
+INFO:     127.0.0.1:41110 - "POST /process-json HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:41112 - "POST /process-json HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:41114 - "POST /process-json HTTP/1.1" 200 OK
+12:58:24 | server_api | [INFO]     | 🚀 [API] Iniciando tarea 69d93c77-bf09-42d0-9e6f-573543adce3e con archivo: C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\uploads\69d93c77-bf09-42d0-9e6f-573543adce3e_data.csv
+12:58:24 | server_api | [INFO]     | 🚦 [API] Tarea 69d93c77-bf09-42d0-9e6f-573543adce3e esperando su turno...
+12:58:24 | server_api | [INFO]     | 🟢 [API] Turno concedido a 69d93c77-bf09-42d0-9e6f-573543adce3e. Iniciando...
+12:58:24 | server_api | [INFO]     | 📊 [MONITOR 69d9] RAM: 115.12MB (45.2%) | CPU: 0.0% | Chrome Zombies: 0
+12:58:24 | main_hp | [INFO]     | === INICIO DEL FLUJO DE TASACIÓN ===
+12:58:24 | main_hp | [INFO]     | >>> EJECUTANDO PASO 0: Descarga automática desde C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\uploads\69d93c77-bf09-42d0-9e6f-573543adce3e_data.csv...
+12:58:24 | paso0_hp | [INFO]     | === PASO 0: INICIO DEL FLUJO DE DESCARGAS ===
+12:58:24 | paso0_hp | [INFO]     | 📂 Archivo de entrada: C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\uploads\69d93c77-bf09-42d0-9e6f-573543adce3e_data.csv
+12:58:24 | paso0_hp | [INFO]     | 📂 Intentando cargar archivo origen: C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\uploads\69d93c77-bf09-42d0-9e6f-573543adce3e_data.csv
+12:58:24 | paso0_hp | [DEBUG]     |    📄 Formato detectado: CSV
+12:58:24 | paso0_hp | [INFO]     |    ✅ Archivo cargado. Filas encontradas: 1
+12:58:24 | paso0_hp | [DEBUG]     | 🧹 Estandarizando y limpiando datos de entrada...
+12:58:24 | paso0_hp | [INFO]     | ✅ Datos listos para procesar: 1 propiedades.
+12:58:24 | paso0_hp | [INFO]     | 🚀 Iniciando ciclo de descargas PARALELO para 1 propiedades. WORKERS=2
+12:58:24 | paso0_hp | [INFO]     | 🔧 Configurando Driver Chrome (Opciones y Preferencias - Modo Ahorro)...
+12:58:24 | paso0_hp | [DEBUG]     |    📂 Carpeta de descargas configurada: C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\input_pdfs\temp_1
+12:58:24 | paso0_hp | [DEBUG]     | informacion de configuracion del driver: <selenium.webdriver.chrome.options.Options object at 0x0000027B85543D90>
+12:58:25 | paso0_hp | [INFO]     | 🔐 Iniciando proceso de Login...
+12:58:25 | paso0_hp | [DEBUG]     |    ⌨️ Ingresando credenciales...
+12:58:26 | server_api | [INFO]     | 📊 [MONITOR 69d9] RAM: 645.96MB (46.1%) | CPU: 0.0% | Chrome Zombies: 11
+12:58:26 | server_api | [INFO]     | 🛑 Solicitud de cancelación recibida para 69d93c77-bf09-42d0-9e6f-573543adce3e
+INFO:     127.0.0.1:56118 - "POST /cancel/69d93c77-bf09-42d0-9e6f-573543adce3e HTTP/1.1" 200 OK
+12:58:26 | paso0_hp | [DEBUG]     |    ⏳ Esperando redirección post-login...
+12:58:27 | paso0_hp | [SUCCESS]     | ✅ Login exitoso. Sesión iniciada.
+12:58:28 | server_api | [INFO]     | 📊 [MONITOR 69d9] RAM: 115.91MB (45.3%) | CPU: 0.0% | Chrome Zombies: 0
+INFO:     127.0.0.1:43042 - "GET /process-json HTTP/1.1" 405 Method Not Allowed
+12:58:30 | paso0_hp | [INFO]     | ============================================================
+12:58:30 | paso0_hp | [INFO]     | 📊 REPORTE FINAL DE DESCARGAS
+12:58:30 | paso0_hp | [INFO]     |    - Total Intentados: 1
+12:58:30 | paso0_hp | [INFO]     |    - Descargados OK:   0
+12:58:30 | paso0_hp | [INFO]     |    - Fallidos:         0
+12:58:30 | paso0_hp | [INFO]     | ============================================================
+12:58:30 | paso0_hp | [INFO]     | ============================================================
+12:58:30 | paso0_hp | [SUCCESS]     | 🏁 Proceso finalizado. Descargas exitosas: 0/1
+12:58:30 | main_hp | [WARNING]     | Proceso cancelado en Paso 0.
+12:58:30 | server_api | [WARNING]     | Intento de subida bloqueado: payload_malicioso.txt
+INFO:     127.0.0.1:43045 - "POST /upload-process HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:43047 - "POST /process-json HTTP/1.1" 200 OK
+12:58:32 | server_api | [INFO]     | 🚀 [API] Iniciando tarea 07f732c5-af43-4c68-b479-4aed66640f13 con archivo: C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\uploads\07f732c5-af43-4c68-b479-4aed66640f13_data.csv
+12:58:32 | server_api | [INFO]     | 🚦 [API] Tarea 07f732c5-af43-4c68-b479-4aed66640f13 esperando su turno...
+12:58:32 | server_api | [INFO]     | 🟢 [API] Turno concedido a 07f732c5-af43-4c68-b479-4aed66640f13. Iniciando...
+12:58:32 | server_api | [INFO]     | 📊 [MONITOR 07f7] RAM: 116.07MB (45.1%) | CPU: 0.0% | Chrome Zombies: 0
+12:58:32 | main_hp | [INFO]     | === INICIO DEL FLUJO DE TASACIÓN ===
+12:58:32 | main_hp | [INFO]     | >>> EJECUTANDO PASO 0: Descarga automática desde C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\uploads\07f732c5-af43-4c68-b479-4aed66640f13_data.csv...
+12:58:32 | paso0_hp | [INFO]     | === PASO 0: INICIO DEL FLUJO DE DESCARGAS ===
+12:58:32 | paso0_hp | [INFO]     | 📂 Archivo de entrada: C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\uploads\07f732c5-af43-4c68-b479-4aed66640f13_data.csv
+12:58:32 | paso0_hp | [INFO]     | 📂 Intentando cargar archivo origen: C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\uploads\07f732c5-af43-4c68-b479-4aed66640f13_data.csv
+12:58:32 | paso0_hp | [DEBUG]     |    📄 Formato detectado: CSV
+12:58:32 | paso0_hp | [INFO]     |    ✅ Archivo cargado. Filas encontradas: 1
+12:58:32 | paso0_hp | [DEBUG]     | 🧹 Estandarizando y limpiando datos de entrada...
+12:58:32 | paso0_hp | [INFO]     | ✅ Datos listos para procesar: 1 propiedades.
+12:58:32 | paso0_hp | [INFO]     | 🚀 Iniciando ciclo de descargas PARALELO para 1 propiedades. WORKERS=2
+12:58:32 | paso0_hp | [INFO]     | 🔧 Configurando Driver Chrome (Opciones y Preferencias - Modo Ahorro)...
+12:58:32 | paso0_hp | [DEBUG]     |    📂 Carpeta de descargas configurada: C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\input_pdfs\temp_1
+12:58:32 | paso0_hp | [DEBUG]     | informacion de configuracion del driver: <selenium.webdriver.chrome.options.Options object at 0x0000027B85543B10>
+12:58:33 | paso0_hp | [INFO]     | 🔐 Iniciando proceso de Login...
+12:58:33 | paso0_hp | [DEBUG]     |    ⌨️ Ingresando credenciales...
+12:58:34 | server_api | [INFO]     | 📊 [MONITOR 07f7] RAM: 662.72MB (46.1%) | CPU: 0.0% | Chrome Zombies: 11
+INFO:     127.0.0.1:3557 - "GET /download/07f732c5-af43-4c68-b479-4aed66640f13 HTTP/1.1" 400 Bad Request
+12:58:34 | paso0_hp | [DEBUG]     |    ⏳ Esperando redirección post-login...
+12:58:36 | paso0_hp | [SUCCESS]     | ✅ Login exitoso. Sesión iniciada.
+12:58:36 | paso0_hp | [INFO]     | 🔎 Procesando descarga: Macul - Rol 9064-112
+12:58:36 | server_api | [INFO]     | 📊 [MONITOR 07f7] RAM: 751.92MB (46.3%) | CPU: 0.0% | Chrome Zombies: 11
+12:58:36 | server_api | [INFO]     | 🛑 Solicitud de cancelación recibida para 07f732c5-af43-4c68-b479-4aed66640f13
+INFO:     127.0.0.1:3466 - "POST /cancel/07f732c5-af43-4c68-b479-4aed66640f13 HTTP/1.1" 200 OK
+12:58:37 | paso0_hp | [ERROR]     |    ❌ Fallo durante la descarga: Message: element not interactable: Element is not currently visible and may not be manipulated
+  (Session info: chrome=145.0.7632.160); For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#elementnotinteractableexception
+Stacktrace:
+Symbols not available. Dumping unresolved backtrace:
+        0x7ff7be98aa55
+        0x7ff7be6e8630
+        0x7ff7be47d75d
+        0x7ff7be4856c1
+        0x7ff7be4887e4
+        0x7ff7be4888af
+        0x7ff7be4dd143
+        0x7ff7be4cc441
+        0x7ff7be5019da
+        0x7ff7be4caca6
+        0x7ff7be52591c
+        0x7ff7be4c9098
+        0x7ff7be4c9f83
+        0x7ff7be9b7810
+        0x7ff7be9b1afd
+        0x7ff7be9d2c1a
+        0x7ff7be703345
+        0x7ff7be70b81c
+        0x7ff7be6f1924
+        0x7ff7be6f1ad6
+        0x7ff7be6d7e47
+        0x7ff81854e8d7
+        0x7ff8196ac40c
+
+12:58:38 | server_api | [INFO]     | 📊 [MONITOR 07f7] RAM: 116.45MB (45.1%) | CPU: 0.0% | Chrome Zombies: 0
+INFO:     127.0.0.1:18248 - "GET /status/07f732c5-af43-4c68-b479-4aed66640f13 HTTP/1.1" 200 OK
+12:58:39 | paso0_hp | [INFO]     | ============================================================
+12:58:39 | paso0_hp | [INFO]     | 📊 REPORTE FINAL DE DESCARGAS
+12:58:39 | paso0_hp | [INFO]     |    - Total Intentados: 1
+12:58:39 | paso0_hp | [INFO]     |    - Descargados OK:   0
+12:58:39 | paso0_hp | [INFO]     |    - Fallidos:         1
+12:58:39 | paso0_hp | [INFO]     | ============================================================
+12:58:39 | paso0_hp | [WARNING]     |    ⚠️ Lista de Propiedades Fallidas (No estarán en el Excel):
+12:58:39 | paso0_hp | [WARNING]     |       ❌ Rol: 9064-112 | Comuna: Macul
+12:58:39 | paso0_hp | [INFO]     | ============================================================
+12:58:39 | paso0_hp | [SUCCESS]     | 🏁 Proceso finalizado. Descargas exitosas: 0/1
+12:58:39 | main_hp | [WARNING]     | Proceso cancelado en Paso 0.
+INFO:     127.0.0.1:18250 - "GET /status/07f732c5-af43-4c68-b479-4aed66640f13 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:18252 - "GET /download/07f732c5-af43-4c68-b479-4aed66640f13 HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:18255 - "POST /process-json HTTP/1.1" 200 OK
+12:58:46 | server_api | [INFO]     | 🚀 [API] Iniciando tarea d89df057-a9ca-47b9-81f2-aa8a83cf2672 con archivo: C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\uploads\d89df057-a9ca-47b9-81f2-aa8a83cf2672_data.csv
+12:58:46 | server_api | [INFO]     | 🚦 [API] Tarea d89df057-a9ca-47b9-81f2-aa8a83cf2672 esperando su turno...
+12:58:46 | server_api | [INFO]     | 🟢 [API] Turno concedido a d89df057-a9ca-47b9-81f2-aa8a83cf2672. Iniciando...
+12:58:46 | server_api | [INFO]     | 📊 [MONITOR d89d] RAM: 116.36MB (45.1%) | CPU: 0.0% | Chrome Zombies: 0
+12:58:46 | main_hp | [INFO]     | === INICIO DEL FLUJO DE TASACIÓN ===
+12:58:46 | main_hp | [INFO]     | >>> EJECUTANDO PASO 0: Descarga automática desde C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\uploads\d89df057-a9ca-47b9-81f2-aa8a83cf2672_data.csv...
+12:58:46 | paso0_hp | [INFO]     | === PASO 0: INICIO DEL FLUJO DE DESCARGAS ===
+12:58:46 | paso0_hp | [INFO]     | 📂 Archivo de entrada: C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\uploads\d89df057-a9ca-47b9-81f2-aa8a83cf2672_data.csv
+12:58:46 | paso0_hp | [INFO]     | 📂 Intentando cargar archivo origen: C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\uploads\d89df057-a9ca-47b9-81f2-aa8a83cf2672_data.csv
+12:58:46 | paso0_hp | [DEBUG]     |    📄 Formato detectado: CSV
+12:58:46 | paso0_hp | [INFO]     |    ✅ Archivo cargado. Filas encontradas: 1
+12:58:46 | paso0_hp | [DEBUG]     | 🧹 Estandarizando y limpiando datos de entrada...
+12:58:46 | paso0_hp | [INFO]     | ✅ Datos listos para procesar: 1 propiedades.
+12:58:46 | paso0_hp | [INFO]     | 🚀 Iniciando ciclo de descargas PARALELO para 1 propiedades. WORKERS=2
+12:58:46 | paso0_hp | [INFO]     | 🔧 Configurando Driver Chrome (Opciones y Preferencias - Modo Ahorro)...
+12:58:46 | paso0_hp | [DEBUG]     |    📂 Carpeta de descargas configurada: C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\input_pdfs\temp_1
+12:58:46 | paso0_hp | [DEBUG]     | informacion de configuracion del driver: <selenium.webdriver.chrome.options.Options object at 0x0000027B85552FD0>
+12:58:47 | paso0_hp | [INFO]     | 🔐 Iniciando proceso de Login...
+12:58:48 | paso0_hp | [DEBUG]     |    ⌨️ Ingresando credenciales...
+12:58:48 | server_api | [INFO]     | 📊 [MONITOR d89d] RAM: 664.93MB (46.1%) | CPU: 0.0% | Chrome Zombies: 11
+INFO:     127.0.0.1:47165 - "POST /process-json HTTP/1.1" 200 OK
+12:58:48 | server_api | [INFO]     | 🚀 [API] Iniciando tarea 370fc3b4-0b70-46a9-8abf-2ea808220442 con archivo: C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\uploads\370fc3b4-0b70-46a9-8abf-2ea808220442_data.csv
+12:58:48 | server_api | [INFO]     | 🚦 [API] Tarea 370fc3b4-0b70-46a9-8abf-2ea808220442 esperando su turno...
+12:58:48 | paso0_hp | [DEBUG]     |    ⏳ Esperando redirección post-login...
+12:58:50 | paso0_hp | [SUCCESS]     | ✅ Login exitoso. Sesión iniciada.
+12:58:50 | paso0_hp | [INFO]     | 🔎 Procesando descarga: Macul - Rol 9064-112
+12:58:50 | server_api | [INFO]     | 📊 [MONITOR d89d] RAM: 743.27MB (46.2%) | CPU: 0.0% | Chrome Zombies: 11
+INFO:     127.0.0.1:2484 - "GET /status/d89df057-a9ca-47b9-81f2-aa8a83cf2672 HTTP/1.1" 200 OK
+12:58:51 | paso0_hp | [ERROR]     |    ❌ Fallo durante la descarga: Message: element not interactable: Element is not currently visible and may not be manipulated
+  (Session info: chrome=145.0.7632.160); For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#elementnotinteractableexception
+Stacktrace:
+Symbols not available. Dumping unresolved backtrace:
+        0x7ff7be98aa55
+        0x7ff7be6e8630
+        0x7ff7be47d75d
+        0x7ff7be4856c1
+        0x7ff7be4887e4
+        0x7ff7be4888af
+        0x7ff7be4dd143
+        0x7ff7be4cc441
+        0x7ff7be5019da
+        0x7ff7be4caca6
+        0x7ff7be52591c
+        0x7ff7be4c9098
+        0x7ff7be4c9f83
+        0x7ff7be9b7810
+        0x7ff7be9b1afd
+        0x7ff7be9d2c1a
+        0x7ff7be703345
+        0x7ff7be70b81c
+        0x7ff7be6f1924
+        0x7ff7be6f1ad6
+        0x7ff7be6d7e47
+        0x7ff81854e8d7
+        0x7ff8196ac40c
+
+12:58:51 | paso0_hp | [WARNING]     |       🔄 [Worker-1] Reintento 2/3 para 9064-112...
+12:58:51 | paso0_hp | [INFO]     | 🔎 Procesando descarga: Macul - Rol 9064-112
+12:58:52 | paso0_hp | [DEBUG]     |    🏙️ Seleccionando comuna 'Macul'...
+12:58:52 | paso0_hp | [DEBUG]     |  buscando elemento por ID
+12:58:52 | paso0_hp | [DEBUG]     |  limpiando campo:
+12:58:52 | paso0_hp | [DEBUG]     |  ingresando rol: 9064-112
+12:58:52 | paso0_hp | [DEBUG]     |  CLICK BUSCAR
+12:58:52 | paso0_hp | [DEBUG]     |    ⏳ Validando existencia del rol...
+12:58:52 | server_api | [INFO]     | 📊 [MONITOR d89d] RAM: 844.14MB (46.5%) | CPU: 0.0% | Chrome Zombies: 11
+INFO:     127.0.0.1:23279 - "GET /status/d89df057-a9ca-47b9-81f2-aa8a83cf2672 HTTP/1.1" 200 OK
+12:58:53 | paso0_hp | [DEBUG]     |    ⏳ Esperando confirmación de propiedad (Botón Generar)...
+12:58:53 | paso0_hp | [DEBUG]     |  CLICK GENERAR
+12:58:53 | paso0_hp | [DEBUG]     |    ⏳ Esperando que el servidor genere el PDF (Timeout: 150s)...
+12:58:54 | server_api | [INFO]     | 📊 [MONITOR d89d] RAM: 798.75MB (46.5%) | CPU: 0.0% | Chrome Zombies: 10
+INFO:     127.0.0.1:57637 - "GET /status/370fc3b4-0b70-46a9-8abf-2ea808220442 HTTP/1.1" 200 OK
+12:58:56 | server_api | [INFO]     | 📊 [MONITOR d89d] RAM: 800.95MB (46.5%) | CPU: 0.0% | Chrome Zombies: 10
+12:58:56 | server_api | [INFO]     | 🛑 Solicitud de cancelación recibida para d89df057-a9ca-47b9-81f2-aa8a83cf2672
+INFO:     127.0.0.1:57639 - "POST /cancel/d89df057-a9ca-47b9-81f2-aa8a83cf2672 HTTP/1.1" 200 OK
+12:58:58 | server_api | [INFO]     | 📊 [MONITOR d89d] RAM: 745.03MB (46.4%) | CPU: 0.0% | Chrome Zombies: 10
+INFO:     127.0.0.1:43122 - "GET /status/370fc3b4-0b70-46a9-8abf-2ea808220442 HTTP/1.1" 200 OK
+12:59:00 | server_api | [INFO]     | 📊 [MONITOR d89d] RAM: 739.36MB (46.3%) | CPU: 0.0% | Chrome Zombies: 10
+12:59:02 | server_api | [INFO]     | 📊 [MONITOR d89d] RAM: 736.03MB (46.4%) | CPU: 0.0% | Chrome Zombies: 10
+INFO:     127.0.0.1:7668 - "GET /status/370fc3b4-0b70-46a9-8abf-2ea808220442 HTTP/1.1" 200 OK
+12:59:03 | paso0_hp | [DEBUG]     |    🔗 Link detectado: https://storage.googleapis.com/public-housepricing/informe_antecedentes/HousePricing_informe_antecedentes_9064_112_15151_IA2026030615585342191.pdf
+12:59:03 | paso0_hp | [DEBUG]     |  CLICK DESCARGAR
+12:59:03 | paso0_hp | [INFO]     |    📥 Informe listo. Click en Descargar PDF...
+12:59:03 | paso0_hp | [DEBUG]     |    ⏳ Monitoreando carpeta C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\input_pdfs\temp_1 (Timeout: 30s)...
+12:59:04 | paso0_hp | [DEBUG]     |    📄 Archivo detectado: HousePricing_informe_antecedentes_9064_112_15151_IA2026030615585342191.pdf
+12:59:04 | paso0_hp | [DEBUG]     |  MOVIMIENTO ARCHIVO
+12:59:04 | paso0_hp | [DEBUG]     |  Reintentos en mover el archivo: 1
+12:59:04 | paso0_hp | [INFO]     |    💰 Iniciando búsqueda en Tasador para 9064-112 (Macul)...
+12:59:04 | server_api | [INFO]     | 📊 [MONITOR d89d] RAM: 762.67MB (46.6%) | CPU: 0.0% | Chrome Zombies: 10
+12:59:05 | paso0_hp | [DEBUG]     |    🖱️ [Intento 1] Click en Buscar Tasación...
+12:59:06 | paso0_hp | [SUCCESS]     |    ✅ Tasador: Propiedad encontrada. Iniciando secuencia de Wizard...
+12:59:06 | paso0_hp | [DEBUG]     |    🚀 Wizard: Paso 3 completado (Ver Tasación). Esperando carga final...
+12:59:06 | server_api | [INFO]     | 📊 [MONITOR d89d] RAM: 940.91MB (46.8%) | CPU: 0.0% | Chrome Zombies: 10
+INFO:     127.0.0.1:60308 - "GET /status/370fc3b4-0b70-46a9-8abf-2ea808220442 HTTP/1.1" 200 OK
+12:59:08 | server_api | [INFO]     | 📊 [MONITOR d89d] RAM: 939.41MB (46.8%) | CPU: 0.0% | Chrome Zombies: 10
+12:59:09 | paso0_hp | [INFO]     | Valor vta CLP extraido: $ 129.222.786
+12:59:09 | paso0_hp | [INFO]     | Valor vta UF extraido: UF 3.248
+12:59:09 | paso0_hp | [INFO]     | Valor arr CLP extraido: $ 500.472
+12:59:09 | paso0_hp | [INFO]     | Valor arr UF extraido: UF 12,58
+12:59:09 | paso0_hp | [SUCCESS]     |      💵 Venta: $129222786 (3248 UF) | Arriendo: $500472
+{'tasa_vta_clp': 129222786, 'tasa_vta_uf': '3248', 'tasa_arr_clp': 500472, 'tasa_arr_uf': '12,58'}
+12:59:09 | paso0_hp | [SUCCESS]     |    ✅ Descarga completada: Macul_9064-112.pdf
+12:59:10 | server_api | [INFO]     | 📊 [MONITOR d89d] RAM: 116.88MB (45.2%) | CPU: 0.0% | Chrome Zombies: 0
+INFO:     127.0.0.1:8525 - "GET /status/370fc3b4-0b70-46a9-8abf-2ea808220442 HTTP/1.1" 200 OK
+12:59:11 | paso0_hp | [INFO]     | ============================================================
+12:59:11 | paso0_hp | [INFO]     | 📊 REPORTE FINAL DE DESCARGAS
+12:59:11 | paso0_hp | [INFO]     |    - Total Intentados: 1
+12:59:11 | paso0_hp | [INFO]     |    - Descargados OK:   1
+12:59:11 | paso0_hp | [INFO]     |    - Fallidos:         0
+12:59:11 | paso0_hp | [INFO]     | ============================================================
+12:59:11 | paso0_hp | [INFO]     | ============================================================
+12:59:11 | paso0_hp | [SUCCESS]     | 🏁 Proceso finalizado. Descargas exitosas: 1/1
+12:59:11 | main_hp | [INFO]     | ✅ Paso 0 completado. PDFs listos en carpeta de entrada.
+12:59:12 | server_api | [INFO]     | 🟢 [API] Turno concedido a 370fc3b4-0b70-46a9-8abf-2ea808220442. Iniciando...
+12:59:12 | server_api | [INFO]     | 📊 [MONITOR 370f] RAM: 116.87MB (45.2%) | CPU: 0.0% | Chrome Zombies: 0
+12:59:12 | main_hp | [INFO]     | === INICIO DEL FLUJO DE TASACIÓN ===
+12:59:12 | main_hp | [INFO]     | >>> EJECUTANDO PASO 0: Descarga automática desde C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\uploads\370fc3b4-0b70-46a9-8abf-2ea808220442_data.csv...
+12:59:12 | paso0_hp | [INFO]     | === PASO 0: INICIO DEL FLUJO DE DESCARGAS ===
+12:59:12 | paso0_hp | [INFO]     | 📂 Archivo de entrada: C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\uploads\370fc3b4-0b70-46a9-8abf-2ea808220442_data.csv
+12:59:12 | paso0_hp | [INFO]     | 📂 Intentando cargar archivo origen: C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\uploads\370fc3b4-0b70-46a9-8abf-2ea808220442_data.csv
+12:59:12 | paso0_hp | [DEBUG]     |    📄 Formato detectado: CSV
+12:59:12 | paso0_hp | [INFO]     |    ✅ Archivo cargado. Filas encontradas: 1
+12:59:12 | paso0_hp | [DEBUG]     | 🧹 Estandarizando y limpiando datos de entrada...
+12:59:12 | paso0_hp | [INFO]     | ✅ Datos listos para procesar: 1 propiedades.
+12:59:12 | paso0_hp | [INFO]     | 🚀 Iniciando ciclo de descargas PARALELO para 1 propiedades. WORKERS=2
+12:59:12 | paso0_hp | [INFO]     | 🔧 Configurando Driver Chrome (Opciones y Preferencias - Modo Ahorro)...
+12:59:12 | paso0_hp | [DEBUG]     |    📂 Carpeta de descargas configurada: C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\input_pdfs\temp_1
+12:59:12 | paso0_hp | [DEBUG]     | informacion de configuracion del driver: <selenium.webdriver.chrome.options.Options object at 0x0000027B85552EA0>
+12:59:13 | paso0_hp | [INFO]     | 🔐 Iniciando proceso de Login...
+12:59:14 | paso0_hp | [DEBUG]     |    ⌨️ Ingresando credenciales...
+12:59:14 | server_api | [INFO]     | 📊 [MONITOR 370f] RAM: 641.78MB (46.1%) | CPU: 0.0% | Chrome Zombies: 11
+INFO:     127.0.0.1:33018 - "GET /status/370fc3b4-0b70-46a9-8abf-2ea808220442 HTTP/1.1" 200 OK
+12:59:15 | paso0_hp | [DEBUG]     |    ⏳ Esperando redirección post-login...
+12:59:16 | paso0_hp | [SUCCESS]     | ✅ Login exitoso. Sesión iniciada.
+12:59:16 | paso0_hp | [INFO]     | 🔎 Procesando descarga: Macul - Rol 9064-112
+12:59:16 | server_api | [INFO]     | 📊 [MONITOR 370f] RAM: 767.93MB (46.4%) | CPU: 0.0% | Chrome Zombies: 11
+12:59:17 | server_api | [INFO]     | 🛑 Solicitud de cancelación recibida para 370fc3b4-0b70-46a9-8abf-2ea808220442
+INFO:     127.0.0.1:27136 - "POST /cancel/370fc3b4-0b70-46a9-8abf-2ea808220442 HTTP/1.1" 200 OK
+12:59:17 | paso0_hp | [ERROR]     |    ❌ Fallo durante la descarga: Message: element not interactable: Element is not currently visible and may not be manipulated
+  (Session info: chrome=145.0.7632.160); For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#elementnotinteractableexception
+Stacktrace:
+Symbols not available. Dumping unresolved backtrace:
+        0x7ff7be98aa55
+        0x7ff7be6e8630
+        0x7ff7be47d75d
+        0x7ff7be4856c1
+        0x7ff7be4887e4
+        0x7ff7be4888af
+        0x7ff7be4dd143
+        0x7ff7be4cc441
+        0x7ff7be5019da
+        0x7ff7be4caca6
+        0x7ff7be52591c
+        0x7ff7be4c9098
+        0x7ff7be4c9f83
+        0x7ff7be9b7810
+        0x7ff7be9b1afd
+        0x7ff7be9d2c1a
+        0x7ff7be703345
+        0x7ff7be70b81c
+        0x7ff7be6f1924
+        0x7ff7be6f1ad6
+        0x7ff7be6d7e47
+        0x7ff81854e8d7
+        0x7ff8196ac40c
+
+12:59:18 | server_api | [INFO]     | 📊 [MONITOR 370f] RAM: 117.2MB (45.2%) | CPU: 0.0% | Chrome Zombies: 0
+INFO:     127.0.0.1:27141 - "GET /status/370fc3b4-0b70-46a9-8abf-2ea808220442 HTTP/1.1" 200 OK
+12:59:19 | paso0_hp | [INFO]     | ============================================================
+12:59:19 | paso0_hp | [INFO]     | 📊 REPORTE FINAL DE DESCARGAS
+12:59:19 | paso0_hp | [INFO]     |    - Total Intentados: 1
+12:59:19 | paso0_hp | [INFO]     |    - Descargados OK:   0
+12:59:19 | paso0_hp | [INFO]     |    - Fallidos:         1
+12:59:19 | paso0_hp | [INFO]     | ============================================================
+12:59:19 | paso0_hp | [WARNING]     |    ⚠️ Lista de Propiedades Fallidas (No estarán en el Excel):
+12:59:19 | paso0_hp | [WARNING]     |       ❌ Rol: 9064-112 | Comuna: Macul
+12:59:19 | paso0_hp | [INFO]     | ============================================================
+12:59:19 | paso0_hp | [SUCCESS]     | 🏁 Proceso finalizado. Descargas exitosas: 0/1
+12:59:19 | main_hp | [WARNING]     | Proceso cancelado en Paso 0.
+INFO:     127.0.0.1:27143 - "GET /status/370fc3b4-0b70-46a9-8abf-2ea808220442 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:27145 - "POST /process-json HTTP/1.1" 200 OK
+12:59:25 | server_api | [INFO]     | 🚀 [API] Iniciando tarea 0137d5cf-6e84-46e3-a253-63fdce77892e con archivo: C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\uploads\0137d5cf-6e84-46e3-a253-63fdce77892e_data.csv
+12:59:25 | server_api | [INFO]     | 🚦 [API] Tarea 0137d5cf-6e84-46e3-a253-63fdce77892e esperando su turno...
+12:59:25 | server_api | [INFO]     | 🟢 [API] Turno concedido a 0137d5cf-6e84-46e3-a253-63fdce77892e. Iniciando...
+12:59:25 | server_api | [INFO]     | 📊 [MONITOR 0137] RAM: 117.26MB (45.2%) | CPU: 0.0% | Chrome Zombies: 0
+12:59:25 | main_hp | [INFO]     | === INICIO DEL FLUJO DE TASACIÓN ===
+12:59:25 | main_hp | [INFO]     | >>> EJECUTANDO PASO 0: Descarga automática desde C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\uploads\0137d5cf-6e84-46e3-a253-63fdce77892e_data.csv...
+12:59:25 | paso0_hp | [INFO]     | === PASO 0: INICIO DEL FLUJO DE DESCARGAS ===
+12:59:25 | paso0_hp | [INFO]     | 📂 Archivo de entrada: C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\uploads\0137d5cf-6e84-46e3-a253-63fdce77892e_data.csv
+12:59:25 | paso0_hp | [INFO]     | 📂 Intentando cargar archivo origen: C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\uploads\0137d5cf-6e84-46e3-a253-63fdce77892e_data.csv
+12:59:25 | paso0_hp | [DEBUG]     |    📄 Formato detectado: CSV
+12:59:25 | paso0_hp | [INFO]     |    ✅ Archivo cargado. Filas encontradas: 1
+12:59:25 | paso0_hp | [DEBUG]     | 🧹 Estandarizando y limpiando datos de entrada...
+12:59:25 | paso0_hp | [INFO]     | ✅ Datos listos para procesar: 1 propiedades.
+12:59:25 | paso0_hp | [INFO]     | 🚀 Iniciando ciclo de descargas PARALELO para 1 propiedades. WORKERS=2
+12:59:25 | paso0_hp | [INFO]     | 🔧 Configurando Driver Chrome (Opciones y Preferencias - Modo Ahorro)...
+12:59:25 | paso0_hp | [DEBUG]     |    📂 Carpeta de descargas configurada: C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\input_pdfs\temp_1
+12:59:25 | paso0_hp | [DEBUG]     | informacion de configuracion del driver: <selenium.webdriver.chrome.options.Options object at 0x0000027B8559FAD0>
+12:59:26 | paso0_hp | [INFO]     | 🔐 Iniciando proceso de Login...
+12:59:26 | paso0_hp | [DEBUG]     |    ⌨️ Ingresando credenciales...
+12:59:27 | server_api | [INFO]     | 📊 [MONITOR 0137] RAM: 660.95MB (46.1%) | CPU: 0.0% | Chrome Zombies: 11
+INFO:     127.0.0.1:11247 - "GET /status/0137d5cf-6e84-46e3-a253-63fdce77892e HTTP/1.1" 200 OK
+12:59:27 | paso0_hp | [DEBUG]     |    ⏳ Esperando redirección post-login...
+12:59:29 | server_api | [INFO]     | 📊 [MONITOR 0137] RAM: 672.95MB (46.1%) | CPU: 0.0% | Chrome Zombies: 11
+12:59:29 | paso0_hp | [SUCCESS]     | ✅ Login exitoso. Sesión iniciada.
+12:59:29 | paso0_hp | [INFO]     | 🔎 Procesando descarga: Macul - Rol 9064-112
+12:59:31 | paso0_hp | [ERROR]     |    ❌ Fallo durante la descarga: Message: element not interactable: Element is not currently visible and may not be manipulated
+  (Session info: chrome=145.0.7632.160); For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#elementnotinteractableexception
+Stacktrace:
+Symbols not available. Dumping unresolved backtrace:
+        0x7ff7be98aa55
+        0x7ff7be6e8630
+        0x7ff7be47d75d
+        0x7ff7be4856c1
+        0x7ff7be4887e4
+        0x7ff7be4888af
+        0x7ff7be4dd143
+        0x7ff7be4cc441
+        0x7ff7be5019da
+        0x7ff7be4caca6
+        0x7ff7be52591c
+        0x7ff7be4c9098
+        0x7ff7be4c9f83
+        0x7ff7be9b7810
+        0x7ff7be9b1afd
+        0x7ff7be9d2c1a
+        0x7ff7be703345
+        0x7ff7be70b81c
+        0x7ff7be6f1924
+        0x7ff7be6f1ad6
+        0x7ff7be6d7e47
+        0x7ff81854e8d7
+        0x7ff8196ac40c
+
+12:59:31 | paso0_hp | [WARNING]     |       🔄 [Worker-1] Reintento 2/3 para 9064-112...
+12:59:31 | paso0_hp | [INFO]     | 🔎 Procesando descarga: Macul - Rol 9064-112
+12:59:31 | server_api | [INFO]     | 📊 [MONITOR 0137] RAM: 798.2MB (46.4%) | CPU: 0.0% | Chrome Zombies: 11
+12:59:32 | paso0_hp | [DEBUG]     |    🏙️ Seleccionando comuna 'Macul'...
+12:59:32 | paso0_hp | [DEBUG]     |  buscando elemento por ID
+12:59:32 | paso0_hp | [DEBUG]     |  limpiando campo:
+12:59:32 | paso0_hp | [DEBUG]     |  ingresando rol: 9064-112
+12:59:32 | paso0_hp | [DEBUG]     |  CLICK BUSCAR
+12:59:32 | paso0_hp | [DEBUG]     |    ⏳ Validando existencia del rol...
+12:59:32 | paso0_hp | [DEBUG]     |    ⏳ Esperando confirmación de propiedad (Botón Generar)...
+12:59:32 | paso0_hp | [DEBUG]     |  CLICK GENERAR
+12:59:32 | paso0_hp | [DEBUG]     |    ⏳ Esperando que el servidor genere el PDF (Timeout: 150s)...
+12:59:33 | server_api | [INFO]     | 📊 [MONITOR 0137] RAM: 781.75MB (46.5%) | CPU: 0.0% | Chrome Zombies: 10
+INFO:     127.0.0.1:58414 - "GET /status/0137d5cf-6e84-46e3-a253-63fdce77892e HTTP/1.1" 200 OK
+12:59:35 | server_api | [INFO]     | 📊 [MONITOR 0137] RAM: 798.15MB (46.5%) | CPU: 0.0% | Chrome Zombies: 10
+12:59:35 | server_api | [INFO]     | 🛑 Solicitud de cancelación recibida para 0137d5cf-6e84-46e3-a253-63fdce77892e
+INFO:     127.0.0.1:5995 - "POST /cancel/0137d5cf-6e84-46e3-a253-63fdce77892e HTTP/1.1" 200 OK
+12:59:37 | server_api | [INFO]     | 📊 [MONITOR 0137] RAM: 774.64MB (46.5%) | CPU: 0.0% | Chrome Zombies: 10
+INFO:     127.0.0.1:47080 - "GET /status/0137d5cf-6e84-46e3-a253-63fdce77892e HTTP/1.1" 200 OK
+12:59:39 | server_api | [INFO]     | 📊 [MONITOR 0137] RAM: 742.71MB (46.5%) | CPU: 0.0% | Chrome Zombies: 10
+12:59:41 | server_api | [INFO]     | 📊 [MONITOR 0137] RAM: 739.29MB (46.5%) | CPU: 0.0% | Chrome Zombies: 10
+INFO:     127.0.0.1:48045 - "GET /status/0137d5cf-6e84-46e3-a253-63fdce77892e HTTP/1.1" 200 OK
+12:59:43 | paso0_hp | [DEBUG]     |    🔗 Link detectado: https://storage.googleapis.com/public-housepricing/informe_antecedentes/HousePricing_informe_antecedentes_9064_112_15151_IA2026030615593398729.pdf
+12:59:43 | paso0_hp | [DEBUG]     |  CLICK DESCARGAR
+12:59:43 | paso0_hp | [INFO]     |    📥 Informe listo. Click en Descargar PDF...
+12:59:43 | paso0_hp | [DEBUG]     |    ⏳ Monitoreando carpeta C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\input_pdfs\temp_1 (Timeout: 30s)...
+12:59:43 | server_api | [INFO]     | 📊 [MONITOR 0137] RAM: 794.49MB (46.6%) | CPU: 0.0% | Chrome Zombies: 11
+12:59:44 | paso0_hp | [DEBUG]     |    📄 Archivo detectado: HousePricing_informe_antecedentes_9064_112_15151_IA2026030615593398729.pdf
+12:59:44 | paso0_hp | [DEBUG]     |  MOVIMIENTO ARCHIVO
+12:59:44 | paso0_hp | [DEBUG]     |  Reintentos en mover el archivo: 1
+12:59:44 | paso0_hp | [INFO]     |    💰 Iniciando búsqueda en Tasador para 9064-112 (Macul)...
+12:59:45 | paso0_hp | [DEBUG]     |    🖱️ [Intento 1] Click en Buscar Tasación...
+12:59:45 | server_api | [INFO]     | 📊 [MONITOR 0137] RAM: 917.11MB (46.9%) | CPU: 0.0% | Chrome Zombies: 10
+INFO:     127.0.0.1:59390 - "GET /status/0137d5cf-6e84-46e3-a253-63fdce77892e HTTP/1.1" 200 OK
+12:59:45 | paso0_hp | [SUCCESS]     |    ✅ Tasador: Propiedad encontrada. Iniciando secuencia de Wizard...
+12:59:45 | paso0_hp | [DEBUG]     |    🚀 Wizard: Paso 3 completado (Ver Tasación). Esperando carga final...
+12:59:47 | paso0_hp | [INFO]     | Valor vta CLP extraido: $ 129.222.786
+12:59:47 | paso0_hp | [INFO]     | Valor vta UF extraido: UF 3.248
+12:59:47 | paso0_hp | [INFO]     | Valor arr CLP extraido: $ 500.472
+12:59:47 | paso0_hp | [INFO]     | Valor arr UF extraido: UF 12,58
+12:59:47 | paso0_hp | [SUCCESS]     |      💵 Venta: $129222786 (3248 UF) | Arriendo: $500472
+{'tasa_vta_clp': 129222786, 'tasa_vta_uf': '3248', 'tasa_arr_clp': 500472, 'tasa_arr_uf': '12,58'}
+12:59:47 | paso0_hp | [SUCCESS]     |    ✅ Descarga completada: Macul_9064-112.pdf
+12:59:47 | server_api | [INFO]     | 📊 [MONITOR 0137] RAM: 136.95MB (45.5%) | CPU: 0.0% | Chrome Zombies: 1
+12:59:49 | server_api | [INFO]     | 📊 [MONITOR 0137] RAM: 118.37MB (45.3%) | CPU: 0.0% | Chrome Zombies: 0
+12:59:49 | paso0_hp | [INFO]     | ============================================================
+12:59:49 | paso0_hp | [INFO]     | 📊 REPORTE FINAL DE DESCARGAS
+12:59:49 | paso0_hp | [INFO]     |    - Total Intentados: 1
+12:59:49 | paso0_hp | [INFO]     |    - Descargados OK:   1
+12:59:49 | paso0_hp | [INFO]     |    - Fallidos:         0
+12:59:49 | paso0_hp | [INFO]     | ============================================================
+12:59:49 | paso0_hp | [INFO]     | ============================================================
+12:59:49 | paso0_hp | [SUCCESS]     | 🏁 Proceso finalizado. Descargas exitosas: 1/1
+12:59:49 | main_hp | [INFO]     | ✅ Paso 0 completado. PDFs listos en carpeta de entrada.
+INFO:     127.0.0.1:34817 - "GET /status/0137d5cf-6e84-46e3-a253-63fdce77892e HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34820 - "POST /process-json HTTP/1.1" 200 OK
+12:59:51 | server_api | [INFO]     | 🚀 [API] Iniciando tarea 154e73e4-bb84-4aa6-a25e-eac567dcecf5 con archivo: C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\uploads\154e73e4-bb84-4aa6-a25e-eac567dcecf5_data.csv
+12:59:51 | server_api | [INFO]     | 🚦 [API] Tarea 154e73e4-bb84-4aa6-a25e-eac567dcecf5 esperando su turno...
+12:59:51 | server_api | [INFO]     | 🟢 [API] Turno concedido a 154e73e4-bb84-4aa6-a25e-eac567dcecf5. Iniciando...
+12:59:51 | server_api | [INFO]     | 📊 [MONITOR 154e] RAM: 118.43MB (45.3%) | CPU: 0.0% | Chrome Zombies: 0
+12:59:51 | main_hp | [INFO]     | === INICIO DEL FLUJO DE TASACIÓN ===
+12:59:51 | main_hp | [INFO]     | >>> EJECUTANDO PASO 0: Descarga automática desde C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\uploads\154e73e4-bb84-4aa6-a25e-eac567dcecf5_data.csv...
+12:59:51 | paso0_hp | [INFO]     | === PASO 0: INICIO DEL FLUJO DE DESCARGAS ===
+12:59:51 | paso0_hp | [INFO]     | 📂 Archivo de entrada: C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\uploads\154e73e4-bb84-4aa6-a25e-eac567dcecf5_data.csv
+12:59:51 | paso0_hp | [INFO]     | 📂 Intentando cargar archivo origen: C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\uploads\154e73e4-bb84-4aa6-a25e-eac567dcecf5_data.csv
+12:59:51 | paso0_hp | [DEBUG]     |    📄 Formato detectado: CSV
+12:59:51 | paso0_hp | [INFO]     |    ✅ Archivo cargado. Filas encontradas: 1
+12:59:51 | paso0_hp | [DEBUG]     | 🧹 Estandarizando y limpiando datos de entrada...
+12:59:51 | paso0_hp | [INFO]     | ✅ Datos listos para procesar: 1 propiedades.
+12:59:51 | paso0_hp | [INFO]     | 🚀 Iniciando ciclo de descargas PARALELO para 1 propiedades. WORKERS=2
+12:59:51 | paso0_hp | [INFO]     | 🔧 Configurando Driver Chrome (Opciones y Preferencias - Modo Ahorro)...
+12:59:51 | paso0_hp | [DEBUG]     |    📂 Carpeta de descargas configurada: C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\input_pdfs\temp_1
+12:59:51 | paso0_hp | [DEBUG]     | informacion de configuracion del driver: <selenium.webdriver.chrome.options.Options object at 0x0000027B855B1370>
+12:59:52 | paso0_hp | [INFO]     | 🔐 Iniciando proceso de Login...
+12:59:52 | paso0_hp | [DEBUG]     |    ⌨️ Ingresando credenciales...
+12:59:53 | server_api | [INFO]     | 📊 [MONITOR 154e] RAM: 672.13MB (46.2%) | CPU: 0.0% | Chrome Zombies: 11
+12:59:53 | server_api | [INFO]     | 🛑 Solicitud de cancelación recibida para 154e73e4-bb84-4aa6-a25e-eac567dcecf5
+INFO:     127.0.0.1:27637 - "POST /cancel/154e73e4-bb84-4aa6-a25e-eac567dcecf5 HTTP/1.1" 200 OK
+12:59:53 | paso0_hp | [DEBUG]     |    ⏳ Esperando redirección post-login...
+12:59:55 | paso0_hp | [SUCCESS]     | ✅ Login exitoso. Sesión iniciada.
+12:59:55 | server_api | [INFO]     | 📊 [MONITOR 154e] RAM: 116.62MB (45.3%) | CPU: 0.0% | Chrome Zombies: 0
+12:59:57 | paso0_hp | [INFO]     | ============================================================
+12:59:57 | paso0_hp | [INFO]     | 📊 REPORTE FINAL DE DESCARGAS
+12:59:57 | paso0_hp | [INFO]     |    - Total Intentados: 1
+12:59:57 | paso0_hp | [INFO]     |    - Descargados OK:   0
+12:59:57 | paso0_hp | [INFO]     |    - Fallidos:         0
+12:59:57 | paso0_hp | [INFO]     | ============================================================
+12:59:57 | paso0_hp | [INFO]     | ============================================================
+12:59:57 | paso0_hp | [SUCCESS]     | 🏁 Proceso finalizado. Descargas exitosas: 0/1
+12:59:57 | main_hp | [WARNING]     | Proceso cancelado en Paso 0.
+INFO:     127.0.0.1:55379 - "GET /api/datos/propiedades%3B%20DROP%20TABLE%20deudas_tgr%3B HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:55381 - "GET /api/datos/propiedades%20WHERE%201%3D1 HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:55384 - "GET /api/datos/usuarios HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:55386 - "POST /upload-process HTTP/1.1" 200 OK
+13:00:06 | server_api | [INFO]     | 🚀 [API] Iniciando tarea 7dcdaace-8a92-4e51-bff5-d9fb9ae4bf71 con archivo: C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\uploads\7dcdaace-8a92-4e51-bff5-d9fb9ae4bf71_empty_batch.csv
+13:00:06 | server_api | [INFO]     | 🚦 [API] Tarea 7dcdaace-8a92-4e51-bff5-d9fb9ae4bf71 esperando su turno...
+13:00:06 | server_api | [INFO]     | 🟢 [API] Turno concedido a 7dcdaace-8a92-4e51-bff5-d9fb9ae4bf71. Iniciando...
+13:00:06 | server_api | [INFO]     | 📊 [MONITOR 7dcd] RAM: 116.75MB (45.2%) | CPU: 0.0% | Chrome Zombies: 0
+13:00:06 | main_hp | [INFO]     | === INICIO DEL FLUJO DE TASACIÓN ===
+13:00:06 | main_hp | [INFO]     | >>> EJECUTANDO PASO 0: Descarga automática desde C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\uploads\7dcdaace-8a92-4e51-bff5-d9fb9ae4bf71_empty_batch.csv...
+13:00:06 | paso0_hp | [INFO]     | === PASO 0: INICIO DEL FLUJO DE DESCARGAS ===
+13:00:06 | paso0_hp | [INFO]     | 📂 Archivo de entrada: C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\uploads\7dcdaace-8a92-4e51-bff5-d9fb9ae4bf71_empty_batch.csv
+13:00:06 | paso0_hp | [INFO]     | 📂 Intentando cargar archivo origen: C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\uploads\7dcdaace-8a92-4e51-bff5-d9fb9ae4bf71_empty_batch.csv
+13:00:06 | paso0_hp | [DEBUG]     |    📄 Formato detectado: CSV
+13:00:06 | paso0_hp | [INFO]     |    ✅ Archivo cargado. Filas encontradas: 0
+13:00:06 | paso0_hp | [ERROR]     | ❌ No se pudieron cargar los datos iniciales. Abortando.
+13:00:06 | main_hp | [ERROR]     | ❌ Error técnico: Archivo no soportado o sin datos válidos.
+13:00:06 | server_api | [ERROR]     | ❌ [API] Excepción no controlada en Task 7dcdaace-8a92-4e51-bff5-d9fb9ae4bf71: ❌ Error técnico: Archivo no soportado o sin datos válidos.
+Traceback (most recent call last):
+  File "C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\server.py", line 203, in ejecutar_proceso_background
+    exito = main_hp.main(
+        cancel_event=cancel_event,
+        ruta_lista=file_path,
+        progress_callback=progress_callback_api
+    )
+  File "C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\api\main_hp.py", line 145, in main
+    raise Exception(mensaje_error)
+Exception: ❌ Error técnico: Archivo no soportado o sin datos válidos.
+INFO:     127.0.0.1:55388 - "GET /status/7dcdaace-8a92-4e51-bff5-d9fb9ae4bf71 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55390 - "POST /process-json HTTP/1.1" 200 OK
+13:00:10 | server_api | [INFO]     | 🚀 [API] Iniciando tarea b8c4db5e-7590-4231-b2e4-a8f8b504be70 con archivo: C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\uploads\b8c4db5e-7590-4231-b2e4-a8f8b504be70_data.csv
+13:00:10 | server_api | [INFO]     | 🚦 [API] Tarea b8c4db5e-7590-4231-b2e4-a8f8b504be70 esperando su turno...
+13:00:10 | server_api | [INFO]     | 🟢 [API] Turno concedido a b8c4db5e-7590-4231-b2e4-a8f8b504be70. Iniciando...
+13:00:10 | server_api | [INFO]     | 📊 [MONITOR b8c4] RAM: 117.12MB (45.2%) | CPU: 0.0% | Chrome Zombies: 0
+13:00:10 | main_hp | [INFO]     | === INICIO DEL FLUJO DE TASACIÓN ===
+13:00:10 | main_hp | [INFO]     | >>> EJECUTANDO PASO 0: Descarga automática desde C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\uploads\b8c4db5e-7590-4231-b2e4-a8f8b504be70_data.csv...
+13:00:10 | paso0_hp | [INFO]     | === PASO 0: INICIO DEL FLUJO DE DESCARGAS ===
+13:00:10 | paso0_hp | [INFO]     | 📂 Archivo de entrada: C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\uploads\b8c4db5e-7590-4231-b2e4-a8f8b504be70_data.csv
+13:00:10 | paso0_hp | [INFO]     | 📂 Intentando cargar archivo origen: C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\uploads\b8c4db5e-7590-4231-b2e4-a8f8b504be70_data.csv
+13:00:10 | paso0_hp | [DEBUG]     |    📄 Formato detectado: CSV
+13:00:10 | paso0_hp | [INFO]     |    ✅ Archivo cargado. Filas encontradas: 1
+13:00:10 | paso0_hp | [DEBUG]     | 🧹 Estandarizando y limpiando datos de entrada...
+13:00:10 | paso0_hp | [INFO]     | ✅ Datos listos para procesar: 1 propiedades.
+13:00:10 | paso0_hp | [INFO]     | 🚀 Iniciando ciclo de descargas PARALELO para 1 propiedades. WORKERS=2
+13:00:10 | paso0_hp | [INFO]     | 🔧 Configurando Driver Chrome (Opciones y Preferencias - Modo Ahorro)...
+13:00:10 | paso0_hp | [DEBUG]     |    📂 Carpeta de descargas configurada: C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\input_pdfs\temp_1
+13:00:10 | paso0_hp | [DEBUG]     | informacion de configuracion del driver: <selenium.webdriver.chrome.options.Options object at 0x0000027B855B1150>
+13:00:11 | paso0_hp | [INFO]     | 🔐 Iniciando proceso de Login...
+13:00:12 | paso0_hp | [DEBUG]     |    ⌨️ Ingresando credenciales...
+13:00:12 | server_api | [INFO]     | 📊 [MONITOR b8c4] RAM: 597.76MB (46.1%) | CPU: 0.0% | Chrome Zombies: 11
+INFO:     127.0.0.1:27292 - "GET /status/b8c4db5e-7590-4231-b2e4-a8f8b504be70 HTTP/1.1" 200 OK
+13:00:13 | paso0_hp | [DEBUG]     |    ⏳ Esperando redirección post-login...
+13:00:14 | paso0_hp | [SUCCESS]     | ✅ Login exitoso. Sesión iniciada.
+13:00:14 | paso0_hp | [INFO]     | 🔎 Procesando descarga: Macul - Rol 9064-112
+13:00:14 | server_api | [INFO]     | 📊 [MONITOR b8c4] RAM: 744.31MB (46.4%) | CPU: 0.0% | Chrome Zombies: 11
+13:00:15 | paso0_hp | [ERROR]     |    ❌ Fallo durante la descarga: Message: element not interactable: Element is not currently visible and may not be manipulated
+  (Session info: chrome=145.0.7632.160); For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#elementnotinteractableexception
+Stacktrace:
+Symbols not available. Dumping unresolved backtrace:
+        0x7ff7be98aa55
+        0x7ff7be6e8630
+        0x7ff7be47d75d
+        0x7ff7be4856c1
+        0x7ff7be4887e4
+        0x7ff7be4888af
+        0x7ff7be4dd143
+        0x7ff7be4cc441
+        0x7ff7be5019da
+        0x7ff7be4caca6
+        0x7ff7be52591c
+        0x7ff7be4c9098
+        0x7ff7be4c9f83
+        0x7ff7be9b7810
+        0x7ff7be9b1afd
+        0x7ff7be9d2c1a
+        0x7ff7be703345
+        0x7ff7be70b81c
+        0x7ff7be6f1924
+        0x7ff7be6f1ad6
+        0x7ff7be6d7e47
+        0x7ff81854e8d7
+        0x7ff8196ac40c
+
+13:00:15 | paso0_hp | [WARNING]     |       🔄 [Worker-1] Reintento 2/3 para 9064-112...
+13:00:15 | paso0_hp | [INFO]     | 🔎 Procesando descarga: Macul - Rol 9064-112
+13:00:16 | server_api | [INFO]     | 📊 [MONITOR b8c4] RAM: 808.14MB (46.5%) | CPU: 0.0% | Chrome Zombies: 11
+13:00:17 | paso0_hp | [DEBUG]     |    🏙️ Seleccionando comuna 'Macul'...
+13:00:17 | paso0_hp | [DEBUG]     |  buscando elemento por ID
+13:00:17 | paso0_hp | [DEBUG]     |  limpiando campo:
+13:00:17 | paso0_hp | [DEBUG]     |  ingresando rol: 9064-112
+13:00:17 | paso0_hp | [DEBUG]     |  CLICK BUSCAR
+13:00:17 | paso0_hp | [DEBUG]     |    ⏳ Validando existencia del rol...
+13:00:17 | paso0_hp | [DEBUG]     |    ⏳ Esperando confirmación de propiedad (Botón Generar)...
+13:00:17 | paso0_hp | [DEBUG]     |  CLICK GENERAR
+13:00:17 | paso0_hp | [DEBUG]     |    ⏳ Esperando que el servidor genere el PDF (Timeout: 150s)...
+INFO:     127.0.0.1:37171 - "GET /status/b8c4db5e-7590-4231-b2e4-a8f8b504be70 HTTP/1.1" 200 OK
+13:00:18 | server_api | [INFO]     | 📊 [MONITOR b8c4] RAM: 789.54MB (46.6%) | CPU: 0.0% | Chrome Zombies: 10
+13:00:20 | server_api | [INFO]     | 📊 [MONITOR b8c4] RAM: 805.81MB (46.6%) | CPU: 0.0% | Chrome Zombies: 10
+13:00:22 | server_api | [INFO]     | 📊 [MONITOR b8c4] RAM: 776.95MB (46.5%) | CPU: 0.0% | Chrome Zombies: 10
+INFO:     127.0.0.1:20846 - "GET /status/b8c4db5e-7590-4231-b2e4-a8f8b504be70 HTTP/1.1" 200 OK
+13:00:24 | server_api | [INFO]     | 📊 [MONITOR b8c4] RAM: 745.56MB (46.6%) | CPU: 0.0% | Chrome Zombies: 10
+13:00:26 | server_api | [INFO]     | 📊 [MONITOR b8c4] RAM: 742.45MB (46.6%) | CPU: 0.0% | Chrome Zombies: 10
+INFO:     127.0.0.1:63687 - "GET /status/b8c4db5e-7590-4231-b2e4-a8f8b504be70 HTTP/1.1" 200 OK
+13:00:28 | paso0_hp | [DEBUG]     |    🔗 Link detectado: https://storage.googleapis.com/public-housepricing/informe_antecedentes/HousePricing_informe_antecedentes_9064_112_15151_IA2026030616001873778.pdf
+13:00:28 | paso0_hp | [DEBUG]     |  CLICK DESCARGAR
+13:00:28 | paso0_hp | [INFO]     |    📥 Informe listo. Click en Descargar PDF...
+13:00:28 | paso0_hp | [DEBUG]     |    ⏳ Monitoreando carpeta C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\input_pdfs\temp_1 (Timeout: 30s)...
+13:00:28 | server_api | [INFO]     | 📊 [MONITOR b8c4] RAM: 796.95MB (46.7%) | CPU: 0.0% | Chrome Zombies: 11
+13:00:30 | paso0_hp | [DEBUG]     |    📄 Archivo detectado: HousePricing_informe_antecedentes_9064_112_15151_IA2026030616001873778.pdf
+13:00:30 | paso0_hp | [DEBUG]     |  MOVIMIENTO ARCHIVO
+13:00:30 | paso0_hp | [DEBUG]     |  Reintentos en mover el archivo: 1
+13:00:30 | paso0_hp | [INFO]     |    💰 Iniciando búsqueda en Tasador para 9064-112 (Macul)...
+13:00:30 | server_api | [INFO]     | 📊 [MONITOR b8c4] RAM: 827.85MB (46.7%) | CPU: 0.0% | Chrome Zombies: 10
+13:00:31 | paso0_hp | [DEBUG]     |    🖱️ [Intento 1] Click en Buscar Tasación...
+13:00:32 | paso0_hp | [SUCCESS]     |    ✅ Tasador: Propiedad encontrada. Iniciando secuencia de Wizard...
+13:00:32 | paso0_hp | [DEBUG]     |    🚀 Wizard: Paso 3 completado (Ver Tasación). Esperando carga final...
+13:00:32 | server_api | [INFO]     | 📊 [MONITOR b8c4] RAM: 936.43MB (46.9%) | CPU: 0.0% | Chrome Zombies: 10
+INFO:     127.0.0.1:50276 - "GET /status/b8c4db5e-7590-4231-b2e4-a8f8b504be70 HTTP/1.1" 200 OK
+13:00:33 | paso0_hp | [INFO]     | Valor vta CLP extraido: $ 129.222.786
+13:00:34 | paso0_hp | [INFO]     | Valor vta UF extraido: UF 3.248
+13:00:34 | paso0_hp | [INFO]     | Valor arr CLP extraido: $ 500.472
+13:00:34 | paso0_hp | [INFO]     | Valor arr UF extraido: UF 12,58
+13:00:34 | paso0_hp | [SUCCESS]     |      💵 Venta: $129222786 (3248 UF) | Arriendo: $500472
+{'tasa_vta_clp': 129222786, 'tasa_vta_uf': '3248', 'tasa_arr_clp': 500472, 'tasa_arr_uf': '12,58'}
+13:00:34 | paso0_hp | [SUCCESS]     |    ✅ Descarga completada: Macul_9064-112.pdf
+13:00:34 | server_api | [INFO]     | 📊 [MONITOR b8c4] RAM: 117.55MB (45.2%) | CPU: 0.0% | Chrome Zombies: 0
+13:00:36 | paso0_hp | [INFO]     | ============================================================
+13:00:36 | paso0_hp | [INFO]     | 📊 REPORTE FINAL DE DESCARGAS
+13:00:36 | paso0_hp | [INFO]     |    - Total Intentados: 1
+13:00:36 | paso0_hp | [INFO]     |    - Descargados OK:   1
+13:00:36 | paso0_hp | [INFO]     |    - Fallidos:         0
+13:00:36 | paso0_hp | [INFO]     | ============================================================
+13:00:36 | paso0_hp | [INFO]     | ============================================================
+13:00:36 | paso0_hp | [SUCCESS]     | 🏁 Proceso finalizado. Descargas exitosas: 1/1
+13:00:36 | main_hp | [INFO]     | ✅ Paso 0 completado. PDFs listos en carpeta de entrada.
+13:00:36 | main_hp | [INFO]     | >>> EJECUTANDO PASO 1: Extracción masiva de PDFs...
+13:00:36 | paso1_hp | [INFO]     | 🏁 Iniciando proceso de lote en: ./input_pdfs
+13:00:36 | paso1_hp | [INFO]     | 📂 Archivos encontrados: 1
+13:00:36 | paso1_hp | [INFO]     | 👉 [1/1] Procesando: Macul_9064-112.pdf
+13:00:36 | paso1_hp | [DEBUG]     |    📖 Abierto Macul_9064-112.pdf con pdfplumber (4 páginas)
+13:00:36 | paso1_hp | [INFO]     | --- 📡 INICIANDO MAPEO DE LINKS (COORDENADAS) ---
+13:00:36 | paso1_hp | [DEBUG]     | 📄 Procesando página 1 para mapeo de links...
+13:00:36 | paso1_hp | [INFO]     |    ↳ Página 1: 2 hipervínculos detectados | 33 palabras detectadas.
+13:00:36 | paso1_hp | [DEBUG]     |    ↳ Candidatos a Rol encontrados en pág 1: 1
+13:00:36 | paso1_hp | [DEBUG]     |      ⚠️ Sin link cercano para 9064-112 (Revisar tolerancias)
+13:00:36 | paso1_hp | [DEBUG]     | 📄 Procesando página 2 para mapeo de links...
+13:00:36 | paso1_hp | [INFO]     |    ↳ Página 2: 1 hipervínculos detectados | 51 palabras detectadas.
+13:00:36 | paso1_hp | [DEBUG]     |    ↳ Candidatos a Rol encontrados en pág 2: 0
+13:00:36 | paso1_hp | [DEBUG]     | 📄 Procesando página 3 para mapeo de links...
+13:00:36 | paso1_hp | [INFO]     |    ↳ Página 3: 3 hipervínculos detectados | 71 palabras detectadas.
+13:00:36 | paso1_hp | [DEBUG]     |    ↳ Candidatos a Rol encontrados en pág 3: 5
+13:00:36 | paso1_hp | [DEBUG]     |      ⚠️ Sin link cercano para 9064-927 (Revisar tolerancias)
+13:00:36 | paso1_hp | [DEBUG]     |      ⚠️ Sin link cercano para 9064-775 (Revisar tolerancias)
+13:00:36 | paso1_hp | [DEBUG]     |      ✅ MATCH POTENCIAL para 9064-112: Distancia Vert: 5.08
+13:00:36 | paso1_hp | [SUCCESS]     |    🎯 LINK ASIGNADO A 9064-112 -> https://storage.googleapis.com/public-housepricing/informe_deuda_contribuciones/informe_deuda_contribuciones_13_323_9064_112_8681.pdf
+13:00:36 | paso1_hp | [DEBUG]     |      ✅ MATCH POTENCIAL para 9064-927: Distancia Vert: 5.08
+13:00:36 | paso1_hp | [SUCCESS]     |    🎯 LINK ASIGNADO A 9064-927 -> https://storage.googleapis.com/public-housepricing/informe_deuda_contribuciones/informe_deuda_contribuciones_13_323_9064_927_3410.pdf
+13:00:36 | paso1_hp | [DEBUG]     |      ✅ MATCH POTENCIAL para 9064-775: Distancia Vert: 5.08
+13:00:36 | paso1_hp | [SUCCESS]     |    🎯 LINK ASIGNADO A 9064-775 -> https://storage.googleapis.com/public-housepricing/informe_deuda_contribuciones/informe_deuda_contribuciones_13_323_9064_775_884.pdf
+13:00:36 | paso1_hp | [DEBUG]     | 📄 Procesando página 4 para mapeo de links...
+13:00:36 | paso1_hp | [INFO]     |    ↳ Página 4: 0 hipervínculos detectados | 43 palabras detectadas.
+13:00:36 | paso1_hp | [DEBUG]     |    ↳ Candidatos a Rol encontrados en pág 4: 0
+13:00:36 | paso1_hp | [INFO]     | --- FIN MAPEO LINKS: 3 roles mapeados ---
+13:00:36 | paso1_hp | [DEBUG]     | 🧠 Iniciando parseo de texto plano...
+13:00:36 | paso1_hp | [DEBUG]     |    ↳ Total líneas extraídas: 241
+13:00:36 | paso1_hp | [DEBUG]     |    🗺️ Dirección encontrada: AV. A. VESPUCIO     4455  DP  1109  D
+13:00:36 | paso1_hp | [DEBUG]     |    📍 Comuna Detectada: Macul
+13:00:36 | paso1_hp | [INFO]     |    🏠 Rol Propiedad Detectado: 9064-112
+13:00:36 | paso1_hp | [DEBUG]     |    👤 Propietario: DIAZ TAPIA CRISTINA ALEJANDRA
+13:00:36 | paso1_hp | [DEBUG]     |    🔍 Analizando sección Roles CBR...
+13:00:36 | paso1_hp | [INFO]     |    📚 Roles CBR extraídos: 2
+13:00:36 | paso1_hp | [DEBUG]     |    ⚙️ Ejecutando Regex Globales (Características)...
+13:00:36 | paso1_hp | [DEBUG]     |    ℹ️ M2 Terreno no detectado, usando M2 Construcción como fallback.
+13:00:36 | paso1_hp | [DEBUG]     |    💰 Buscando Deudas y cruzando con Link Map...
+13:00:36 | paso1_hp | [SUCCESS]     |      ✅ Deuda asociada a link: 9064-112 -> $0
+13:00:36 | paso1_hp | [SUCCESS]     |      ✅ Deuda asociada a link: 9064-927 -> $9.018
+13:00:36 | paso1_hp | [SUCCESS]     |      ✅ Deuda asociada a link: 9064-775 -> $123.682
+13:00:36 | paso1_hp | [DEBUG]     |    👥 Transacción: 1 compradores / 1 vendedores.
+13:00:36 | paso1_hp | [DEBUG]     |      ✅ Metadata y Tasación recuperadas para Rol 9064-112.
+13:00:36 | paso1_hp | [SUCCESS]     | ✅ ÉXITO: Macul_9064-112.pdf procesado y datos estructurados.
+13:00:36 | paso1_hp | [SUCCESS]     | 🎉 Proceso de lote finalizado. Total extraídos: 1
+13:00:36 | main_hp | [INFO]     | ✅ Paso 1 completado. 1 propiedades extraídas.
+13:00:36 | main_hp | [INFO]     | >>> EJECUTANDO PASO 2: Búsqueda de mercado (Selenium)...
+13:00:36 | paso2_hp | [INFO]     | 🚀 Iniciando orquestador Selenium PARALELO para 1 propiedades. WORKERS=2
+13:00:36 | paso2_hp | [INFO]     | 👷 [Worker-1] Iniciando sesión Selenium...
+13:00:36 | server_api | [INFO]     | 📊 [MONITOR b8c4] RAM: 276.32MB (45.5%) | CPU: 0.0% | Chrome Zombies: 6
+13:00:37 | paso2_hp | [INFO]     | 🔐 [Worker-1] Logueando en HousePricing...
+13:00:37 | paso2_hp | [DEBUG]     |    ➡️ Navegando a URL de login...
+INFO:     127.0.0.1:46450 - "GET /status/b8c4db5e-7590-4231-b2e4-a8f8b504be70 HTTP/1.1" 200 OK
+13:00:38 | paso2_hp | [DEBUG]     |    ➡️ Ingresando correo...
+13:00:38 | paso2_hp | [DEBUG]     |    ➡️ Ingresando contraseña...
+13:00:38 | paso2_hp | [DEBUG]     |    ➡️ Clickando botón de login...
+13:00:39 | server_api | [INFO]     | 📊 [MONITOR b8c4] RAM: 676.36MB (46.2%) | CPU: 0.0% | Chrome Zombies: 11
+13:00:40 | server_api | [INFO]     | 🛑 Solicitud de cancelación recibida para b8c4db5e-7590-4231-b2e4-a8f8b504be70
+INFO:     127.0.0.1:55725 - "POST /cancel/b8c4db5e-7590-4231-b2e4-a8f8b504be70 HTTP/1.1" 200 OK
+13:00:40 | paso2_hp | [SUCCESS]     | ✅ [Worker-1] Login exitoso.
+13:00:40 | paso2_hp | [DEBUG]     |    ➡️ Esperando que se refrezque la página...
+13:00:41 | server_api | [INFO]     | 📊 [MONITOR b8c4] RAM: 757.07MB (46.4%) | CPU: 0.0% | Chrome Zombies: 11
+INFO:     127.0.0.1:31416 - "GET /status/b8c4db5e-7590-4231-b2e4-a8f8b504be70 HTTP/1.1" 200 OK
+13:00:42 | paso2_hp | [INFO]     | 🛑 [Worker-1] Proceso cancelado.
+13:00:43 | server_api | [INFO]     | 📊 [MONITOR b8c4] RAM: 120.75MB (45.3%) | CPU: 0.0% | Chrome Zombies: 0
+13:00:44 | paso2_hp | [INFO]     | 👋 [Worker-1] Sesión cerrada.
+13:00:44 | paso2_hp | [SUCCESS]     | 🏁 Proceso finalizado. Propiedades procesadas: 0/1
+13:00:44 | main_hp | [WARNING]     | Paso 2 cancelado por usuario.
+INFO:     127.0.0.1:48169 - "GET /status/b8c4db5e-7590-4231-b2e4-a8f8b504be70 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48171 - "POST /process-json HTTP/1.1" 200 OK
+13:00:48 | server_api | [INFO]     | 🚀 [API] Iniciando tarea f6c240bd-1ca7-4f50-8d70-acb30770f2dd con archivo: C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\uploads\f6c240bd-1ca7-4f50-8d70-acb30770f2dd_data.csv
+13:00:48 | server_api | [INFO]     | 🚦 [API] Tarea f6c240bd-1ca7-4f50-8d70-acb30770f2dd esperando su turno...
+13:00:48 | server_api | [INFO]     | 🟢 [API] Turno concedido a f6c240bd-1ca7-4f50-8d70-acb30770f2dd. Iniciando...
+13:00:48 | server_api | [INFO]     | 📊 [MONITOR f6c2] RAM: 120.77MB (45.2%) | CPU: 0.0% | Chrome Zombies: 0
+13:00:48 | main_hp | [INFO]     | === INICIO DEL FLUJO DE TASACIÓN ===
+13:00:48 | main_hp | [INFO]     | >>> EJECUTANDO PASO 0: Descarga automática desde C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\uploads\f6c240bd-1ca7-4f50-8d70-acb30770f2dd_data.csv...
+13:00:48 | paso0_hp | [INFO]     | === PASO 0: INICIO DEL FLUJO DE DESCARGAS ===
+13:00:48 | paso0_hp | [INFO]     | 📂 Archivo de entrada: C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\uploads\f6c240bd-1ca7-4f50-8d70-acb30770f2dd_data.csv
+13:00:48 | paso0_hp | [INFO]     | 📂 Intentando cargar archivo origen: C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\uploads\f6c240bd-1ca7-4f50-8d70-acb30770f2dd_data.csv
+13:00:48 | paso0_hp | [DEBUG]     |    📄 Formato detectado: CSV
+13:00:48 | paso0_hp | [INFO]     |    ✅ Archivo cargado. Filas encontradas: 2
+13:00:48 | paso0_hp | [DEBUG]     | 🧹 Estandarizando y limpiando datos de entrada...
+13:00:48 | paso0_hp | [INFO]     | ✅ Datos listos para procesar: 2 propiedades.
+13:00:48 | paso0_hp | [INFO]     | 🚀 Iniciando ciclo de descargas PARALELO para 2 propiedades. WORKERS=2
+13:00:48 | paso0_hp | [INFO]     | 🔧 Configurando Driver Chrome (Opciones y Preferencias - Modo Ahorro)...
+13:00:48 | paso0_hp | [INFO]     | 🔧 Configurando Driver Chrome (Opciones y Preferencias - Modo Ahorro)...
+13:00:48 | paso0_hp | [DEBUG]     |    📂 Carpeta de descargas configurada: C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\input_pdfs\temp_1
+13:00:48 | paso0_hp | [DEBUG]     |    📂 Carpeta de descargas configurada: C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\input_pdfs\temp_2
+13:00:48 | paso0_hp | [DEBUG]     | informacion de configuracion del driver: <selenium.webdriver.chrome.options.Options object at 0x0000027B8553F750>
+13:00:48 | paso0_hp | [DEBUG]     | informacion de configuracion del driver: <selenium.webdriver.chrome.options.Options object at 0x0000027B85520230>
+13:00:48 | paso0_hp | [INFO]     | 🔐 Iniciando proceso de Login...
+13:00:48 | paso0_hp | [INFO]     | 🔐 Iniciando proceso de Login...
+13:00:49 | paso0_hp | [DEBUG]     |    ⌨️ Ingresando credenciales...
+13:00:49 | paso0_hp | [DEBUG]     |    ⌨️ Ingresando credenciales...
+13:00:49 | paso0_hp | [DEBUG]     |    ⏳ Esperando redirección post-login...
+13:00:49 | paso0_hp | [DEBUG]     |    ⏳ Esperando redirección post-login...
+13:00:50 | server_api | [INFO]     | 📊 [MONITOR f6c2] RAM: 1252.05MB (46.8%) | CPU: 0.0% | Chrome Zombies: 22
+INFO:     127.0.0.1:14689 - "GET /status/f6c240bd-1ca7-4f50-8d70-acb30770f2dd HTTP/1.1" 200 OK
+13:00:52 | paso0_hp | [SUCCESS]     | ✅ Login exitoso. Sesión iniciada.
+13:00:52 | paso0_hp | [INFO]     | 🔎 Procesando descarga: Macul - Rol 9064-112
+13:00:52 | server_api | [INFO]     | 📊 [MONITOR f6c2] RAM: 1317.05MB (47.0%) | CPU: 0.0% | Chrome Zombies: 22
+13:00:52 | paso0_hp | [SUCCESS]     | ✅ Login exitoso. Sesión iniciada.
+13:00:52 | paso0_hp | [INFO]     | 🔎 Procesando descarga: Santiago - Rol 99999-1
+13:00:53 | paso0_hp | [ERROR]     |    ❌ Fallo durante la descarga: Message: element not interactable: Element is not currently visible and may not be manipulated
+  (Session info: chrome=145.0.7632.160); For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#elementnotinteractableexception
+Stacktrace:
+Symbols not available. Dumping unresolved backtrace:
+        0x7ff7be98aa55
+        0x7ff7be6e8630
+        0x7ff7be47d75d
+        0x7ff7be4856c1
+        0x7ff7be4887e4
+        0x7ff7be4888af
+        0x7ff7be4dd143
+        0x7ff7be4cc441
+        0x7ff7be5019da
+        0x7ff7be4caca6
+        0x7ff7be52591c
+        0x7ff7be4c9098
+        0x7ff7be4c9f83
+        0x7ff7be9b7810
+        0x7ff7be9b1afd
+        0x7ff7be9d2c1a
+        0x7ff7be703345
+        0x7ff7be70b81c
+        0x7ff7be6f1924
+        0x7ff7be6f1ad6
+        0x7ff7be6d7e47
+        0x7ff81854e8d7
+        0x7ff8196ac40c
+
+13:00:53 | paso0_hp | [WARNING]     |       🔄 [Worker-1] Reintento 2/3 para 9064-112...
+13:00:53 | paso0_hp | [INFO]     | 🔎 Procesando descarga: Macul - Rol 9064-112
+13:00:53 | paso0_hp | [ERROR]     |    ❌ Fallo durante la descarga: Message: element not interactable: Element is not currently visible and may not be manipulated
+  (Session info: chrome=145.0.7632.160); For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#elementnotinteractableexception
+Stacktrace:
+Symbols not available. Dumping unresolved backtrace:
+        0x7ff7be98aa55
+        0x7ff7be6e8630
+        0x7ff7be47d75d
+        0x7ff7be4856c1
+        0x7ff7be4887e4
+        0x7ff7be4888af
+        0x7ff7be4dd143
+        0x7ff7be4cc441
+        0x7ff7be5019da
+        0x7ff7be4caca6
+        0x7ff7be52591c
+        0x7ff7be4c9098
+        0x7ff7be4c9f83
+        0x7ff7be9b7810
+        0x7ff7be9b1afd
+        0x7ff7be9d2c1a
+        0x7ff7be703345
+        0x7ff7be70b81c
+        0x7ff7be6f1924
+        0x7ff7be6f1ad6
+        0x7ff7be6d7e47
+        0x7ff81854e8d7
+        0x7ff8196ac40c
+
+13:00:53 | paso0_hp | [WARNING]     |       🔄 [Worker-2] Reintento 2/3 para 99999-1...
+13:00:53 | paso0_hp | [INFO]     | 🔎 Procesando descarga: Santiago - Rol 99999-1
+13:00:54 | paso0_hp | [DEBUG]     |    🏙️ Seleccionando comuna 'Macul'...
+13:00:54 | paso0_hp | [DEBUG]     |  buscando elemento por ID
+13:00:54 | server_api | [INFO]     | 📊 [MONITOR f6c2] RAM: 1566.07MB (47.6%) | CPU: 0.0% | Chrome Zombies: 22
+13:00:54 | paso0_hp | [DEBUG]     |  limpiando campo:
+INFO:     127.0.0.1:1895 - "GET /status/f6c240bd-1ca7-4f50-8d70-acb30770f2dd HTTP/1.1" 200 OK
+13:00:54 | paso0_hp | [DEBUG]     |  ingresando rol: 9064-112
+13:00:54 | paso0_hp | [DEBUG]     |  CLICK BUSCAR
+13:00:54 | paso0_hp | [DEBUG]     |    ⏳ Validando existencia del rol...
+13:00:54 | paso0_hp | [DEBUG]     |    🏙️ Seleccionando comuna 'Santiago'...
+13:00:54 | paso0_hp | [DEBUG]     |  buscando elemento por ID
+13:00:54 | paso0_hp | [DEBUG]     |  limpiando campo:
+13:00:54 | paso0_hp | [DEBUG]     |  ingresando rol: 99999-1
+13:00:54 | paso0_hp | [DEBUG]     |  CLICK BUSCAR
+13:00:54 | paso0_hp | [DEBUG]     |    ⏳ Validando existencia del rol...
+13:00:54 | paso0_hp | [DEBUG]     |    ⏳ Esperando confirmación de propiedad (Botón Generar)...
+13:00:54 | paso0_hp | [DEBUG]     |  CLICK GENERAR
+13:00:54 | paso0_hp | [DEBUG]     |    ⏳ Esperando que el servidor genere el PDF (Timeout: 150s)...
+13:00:55 | paso0_hp | [ERROR]     |    ❌ ERROR DEL SITIO: 'Rol no encontrado.' para Rol 99999-1 en Santiago
+13:00:55 | paso0_hp | [WARNING]     |       🔄 [Worker-2] Reintento 3/3 para 99999-1...
+13:00:55 | paso0_hp | [INFO]     | 🔎 Procesando descarga: Santiago - Rol 99999-1
+13:00:56 | server_api | [INFO]     | 📊 [MONITOR f6c2] RAM: 1461.44MB (47.5%) | CPU: 0.0% | Chrome Zombies: 20
+13:00:56 | paso0_hp | [DEBUG]     |    🏙️ Seleccionando comuna 'Santiago'...
+13:00:56 | paso0_hp | [DEBUG]     |  buscando elemento por ID
+13:00:56 | paso0_hp | [DEBUG]     |  limpiando campo:
+13:00:56 | paso0_hp | [DEBUG]     |  ingresando rol: 99999-1
+13:00:56 | paso0_hp | [DEBUG]     |  CLICK BUSCAR
+13:00:56 | paso0_hp | [DEBUG]     |    ⏳ Validando existencia del rol...
+13:00:57 | paso0_hp | [ERROR]     |    ❌ ERROR DEL SITIO: 'Rol no encontrado.' para Rol 99999-1 en Santiago
+13:00:58 | server_api | [INFO]     | 📊 [MONITOR f6c2] RAM: 791.52MB (46.5%) | CPU: 0.0% | Chrome Zombies: 10
+INFO:     127.0.0.1:1070 - "GET /status/f6c240bd-1ca7-4f50-8d70-acb30770f2dd HTTP/1.1" 200 OK
+13:01:00 | server_api | [INFO]     | 📊 [MONITOR f6c2] RAM: 734.51MB (46.4%) | CPU: 0.0% | Chrome Zombies: 10
+13:01:02 | server_api | [INFO]     | 📊 [MONITOR f6c2] RAM: 724.94MB (46.5%) | CPU: 0.0% | Chrome Zombies: 10
+INFO:     127.0.0.1:38504 - "GET /status/f6c240bd-1ca7-4f50-8d70-acb30770f2dd HTTP/1.1" 200 OK
+13:01:04 | server_api | [INFO]     | 📊 [MONITOR f6c2] RAM: 725.11MB (46.5%) | CPU: 0.0% | Chrome Zombies: 10
+13:01:05 | paso0_hp | [DEBUG]     |    🔗 Link detectado: https://storage.googleapis.com/public-housepricing/informe_antecedentes/HousePricing_informe_antecedentes_9064_112_15151_IA2026030616005525170.pdf
+13:01:05 | paso0_hp | [DEBUG]     |  CLICK DESCARGAR
+13:01:05 | paso0_hp | [INFO]     |    📥 Informe listo. Click en Descargar PDF...
+13:01:05 | paso0_hp | [DEBUG]     |    ⏳ Monitoreando carpeta C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\input_pdfs\temp_1 (Timeout: 30s)...
+13:01:06 | server_api | [INFO]     | 📊 [MONITOR f6c2] RAM: 752.3MB (46.6%) | CPU: 0.0% | Chrome Zombies: 10
+INFO:     127.0.0.1:62787 - "GET /status/f6c240bd-1ca7-4f50-8d70-acb30770f2dd HTTP/1.1" 200 OK
+13:01:06 | paso0_hp | [DEBUG]     |    📄 Archivo detectado: HousePricing_informe_antecedentes_9064_112_15151_IA2026030616005525170.pdf
+13:01:06 | paso0_hp | [DEBUG]     |  MOVIMIENTO ARCHIVO
+13:01:06 | paso0_hp | [DEBUG]     |  Reintentos en mover el archivo: 1
+13:01:06 | paso0_hp | [INFO]     |    💰 Iniciando búsqueda en Tasador para 9064-112 (Macul)...
+13:01:07 | paso0_hp | [DEBUG]     |    🖱️ [Intento 1] Click en Buscar Tasación...
+13:01:07 | paso0_hp | [SUCCESS]     |    ✅ Tasador: Propiedad encontrada. Iniciando secuencia de Wizard...
+13:01:08 | paso0_hp | [DEBUG]     |    🚀 Wizard: Paso 3 completado (Ver Tasación). Esperando carga final...
+13:01:08 | server_api | [INFO]     | 📊 [MONITOR f6c2] RAM: 889.75MB (46.8%) | CPU: 0.0% | Chrome Zombies: 10
+13:01:10 | server_api | [INFO]     | 📊 [MONITOR f6c2] RAM: 890.98MB (46.8%) | CPU: 0.0% | Chrome Zombies: 10
+INFO:     127.0.0.1:16135 - "GET /status/f6c240bd-1ca7-4f50-8d70-acb30770f2dd HTTP/1.1" 200 OK
+13:01:11 | paso0_hp | [INFO]     | Valor vta CLP extraido: $ 129.222.786
+13:01:11 | paso0_hp | [INFO]     | Valor vta UF extraido: UF 3.248
+13:01:11 | paso0_hp | [INFO]     | Valor arr CLP extraido: $ 500.472
+13:01:11 | paso0_hp | [INFO]     | Valor arr UF extraido: UF 12,58
+13:01:11 | paso0_hp | [SUCCESS]     |      💵 Venta: $129222786 (3248 UF) | Arriendo: $500472
+{'tasa_vta_clp': 129222786, 'tasa_vta_uf': '3248', 'tasa_arr_clp': 500472, 'tasa_arr_uf': '12,58'}
+13:01:11 | paso0_hp | [SUCCESS]     |    ✅ Descarga completada: Macul_9064-112.pdf
+13:01:12 | server_api | [INFO]     | 📊 [MONITOR f6c2] RAM: 121.45MB (45.3%) | CPU: 0.0% | Chrome Zombies: 0
+13:01:13 | paso0_hp | [INFO]     | ============================================================
+13:01:13 | paso0_hp | [INFO]     | 📊 REPORTE FINAL DE DESCARGAS
+13:01:13 | paso0_hp | [INFO]     |    - Total Intentados: 2
+13:01:13 | paso0_hp | [INFO]     |    - Descargados OK:   1
+13:01:13 | paso0_hp | [INFO]     |    - Fallidos:         1
+13:01:13 | paso0_hp | [INFO]     | ============================================================
+13:01:13 | paso0_hp | [WARNING]     |    ⚠️ Lista de Propiedades Fallidas (No estarán en el Excel):
+13:01:13 | paso0_hp | [WARNING]     |       ❌ Rol: 99999-1 | Comuna: Santiago
+13:01:13 | paso0_hp | [INFO]     | ============================================================
+13:01:13 | paso0_hp | [SUCCESS]     | 🏁 Proceso finalizado. Descargas exitosas: 1/2
+13:01:13 | server_api | [INFO]     | 📊 Task f6c240bd-1ca7-4f50-8d70-acb30770f2dd: 25% - Descargas listas. 1 fallaron.
+13:01:13 | main_hp | [WARNING]     | ⚠️ Paso 0 completado con 1 fallos.
+13:01:13 | main_hp | [INFO]     | >>> EJECUTANDO PASO 1: Extracción masiva de PDFs...
+13:01:13 | paso1_hp | [INFO]     | 🏁 Iniciando proceso de lote en: ./input_pdfs
+13:01:13 | paso1_hp | [INFO]     | 📂 Archivos encontrados: 1
+13:01:13 | paso1_hp | [INFO]     | 👉 [1/1] Procesando: Macul_9064-112.pdf
+13:01:13 | paso1_hp | [DEBUG]     |    📖 Abierto Macul_9064-112.pdf con pdfplumber (4 páginas)
+13:01:13 | paso1_hp | [INFO]     | --- 📡 INICIANDO MAPEO DE LINKS (COORDENADAS) ---
+13:01:13 | paso1_hp | [DEBUG]     | 📄 Procesando página 1 para mapeo de links...
+13:01:13 | paso1_hp | [INFO]     |    ↳ Página 1: 2 hipervínculos detectados | 33 palabras detectadas.
+13:01:13 | paso1_hp | [DEBUG]     |    ↳ Candidatos a Rol encontrados en pág 1: 1
+13:01:13 | paso1_hp | [DEBUG]     |      ⚠️ Sin link cercano para 9064-112 (Revisar tolerancias)
+13:01:13 | paso1_hp | [DEBUG]     | 📄 Procesando página 2 para mapeo de links...
+13:01:13 | paso1_hp | [INFO]     |    ↳ Página 2: 1 hipervínculos detectados | 51 palabras detectadas.
+13:01:13 | paso1_hp | [DEBUG]     |    ↳ Candidatos a Rol encontrados en pág 2: 0
+13:01:13 | paso1_hp | [DEBUG]     | 📄 Procesando página 3 para mapeo de links...
+13:01:13 | paso1_hp | [INFO]     |    ↳ Página 3: 3 hipervínculos detectados | 71 palabras detectadas.
+13:01:13 | paso1_hp | [DEBUG]     |    ↳ Candidatos a Rol encontrados en pág 3: 5
+13:01:13 | paso1_hp | [DEBUG]     |      ⚠️ Sin link cercano para 9064-927 (Revisar tolerancias)
+13:01:13 | paso1_hp | [DEBUG]     |      ⚠️ Sin link cercano para 9064-775 (Revisar tolerancias)
+13:01:13 | paso1_hp | [DEBUG]     |      ✅ MATCH POTENCIAL para 9064-112: Distancia Vert: 5.08
+13:01:13 | paso1_hp | [SUCCESS]     |    🎯 LINK ASIGNADO A 9064-112 -> https://storage.googleapis.com/public-housepricing/informe_deuda_contribuciones/informe_deuda_contribuciones_13_323_9064_112_8681.pdf
+13:01:13 | paso1_hp | [DEBUG]     |      ✅ MATCH POTENCIAL para 9064-927: Distancia Vert: 5.08
+13:01:13 | paso1_hp | [SUCCESS]     |    🎯 LINK ASIGNADO A 9064-927 -> https://storage.googleapis.com/public-housepricing/informe_deuda_contribuciones/informe_deuda_contribuciones_13_323_9064_927_3410.pdf
+13:01:13 | paso1_hp | [DEBUG]     |      ✅ MATCH POTENCIAL para 9064-775: Distancia Vert: 5.08
+13:01:13 | paso1_hp | [SUCCESS]     |    🎯 LINK ASIGNADO A 9064-775 -> https://storage.googleapis.com/public-housepricing/informe_deuda_contribuciones/informe_deuda_contribuciones_13_323_9064_775_884.pdf
+13:01:13 | paso1_hp | [DEBUG]     | 📄 Procesando página 4 para mapeo de links...
+13:01:13 | paso1_hp | [INFO]     |    ↳ Página 4: 0 hipervínculos detectados | 43 palabras detectadas.
+13:01:13 | paso1_hp | [DEBUG]     |    ↳ Candidatos a Rol encontrados en pág 4: 0
+13:01:13 | paso1_hp | [INFO]     | --- FIN MAPEO LINKS: 3 roles mapeados ---
+13:01:13 | paso1_hp | [DEBUG]     | 🧠 Iniciando parseo de texto plano...
+13:01:13 | paso1_hp | [DEBUG]     |    ↳ Total líneas extraídas: 241
+13:01:13 | paso1_hp | [DEBUG]     |    🗺️ Dirección encontrada: AV. A. VESPUCIO     4455  DP  1109  D
+13:01:13 | paso1_hp | [DEBUG]     |    📍 Comuna Detectada: Macul
+13:01:13 | paso1_hp | [INFO]     |    🏠 Rol Propiedad Detectado: 9064-112
+13:01:13 | paso1_hp | [DEBUG]     |    👤 Propietario: DIAZ TAPIA CRISTINA ALEJANDRA
+13:01:13 | paso1_hp | [DEBUG]     |    🔍 Analizando sección Roles CBR...
+13:01:13 | paso1_hp | [INFO]     |    📚 Roles CBR extraídos: 2
+13:01:13 | paso1_hp | [DEBUG]     |    ⚙️ Ejecutando Regex Globales (Características)...
+13:01:13 | paso1_hp | [DEBUG]     |    ℹ️ M2 Terreno no detectado, usando M2 Construcción como fallback.
+13:01:13 | paso1_hp | [DEBUG]     |    💰 Buscando Deudas y cruzando con Link Map...
+13:01:13 | paso1_hp | [SUCCESS]     |      ✅ Deuda asociada a link: 9064-112 -> $0
+13:01:13 | paso1_hp | [SUCCESS]     |      ✅ Deuda asociada a link: 9064-927 -> $9.018
+13:01:13 | paso1_hp | [SUCCESS]     |      ✅ Deuda asociada a link: 9064-775 -> $123.682
+13:01:13 | paso1_hp | [DEBUG]     |    👥 Transacción: 1 compradores / 1 vendedores.
+13:01:13 | paso1_hp | [DEBUG]     |      ✅ Metadata y Tasación recuperadas para Rol 9064-112.
+13:01:13 | paso1_hp | [SUCCESS]     | ✅ ÉXITO: Macul_9064-112.pdf procesado y datos estructurados.
+13:01:13 | paso1_hp | [SUCCESS]     | 🎉 Proceso de lote finalizado. Total extraídos: 1
+13:01:13 | main_hp | [INFO]     | ✅ Paso 1 completado. 1 propiedades extraídas.
+13:01:13 | main_hp | [INFO]     | >>> EJECUTANDO PASO 2: Búsqueda de mercado (Selenium)...
+13:01:13 | paso2_hp | [INFO]     | 🚀 Iniciando orquestador Selenium PARALELO para 1 propiedades. WORKERS=2
+13:01:13 | paso2_hp | [INFO]     | 👷 [Worker-1] Iniciando sesión Selenium...
+13:01:14 | server_api | [INFO]     | 📊 [MONITOR f6c2] RAM: 423.55MB (45.8%) | CPU: 0.0% | Chrome Zombies: 8
+INFO:     127.0.0.1:42527 - "GET /status/f6c240bd-1ca7-4f50-8d70-acb30770f2dd HTTP/1.1" 200 OK
+13:01:14 | paso2_hp | [INFO]     | 🔐 [Worker-1] Logueando en HousePricing...
+13:01:14 | paso2_hp | [DEBUG]     |    ➡️ Navegando a URL de login...
+13:01:15 | paso2_hp | [DEBUG]     |    ➡️ Ingresando correo...
+13:01:15 | paso2_hp | [DEBUG]     |    ➡️ Ingresando contraseña...
+13:01:15 | paso2_hp | [DEBUG]     |    ➡️ Clickando botón de login...
+13:01:16 | server_api | [INFO]     | 📊 [MONITOR f6c2] RAM: 680.31MB (46.2%) | CPU: 0.0% | Chrome Zombies: 11
+13:01:17 | paso2_hp | [SUCCESS]     | ✅ [Worker-1] Login exitoso.
+13:01:17 | paso2_hp | [DEBUG]     |    ➡️ Esperando que se refrezque la página...
+13:01:18 | server_api | [INFO]     | 📊 [MONITOR f6c2] RAM: 764.79MB (46.4%) | CPU: 0.0% | Chrome Zombies: 11
+INFO:     127.0.0.1:64149 - "GET /status/f6c240bd-1ca7-4f50-8d70-acb30770f2dd HTTP/1.1" 200 OK
+13:01:19 | paso2_hp | [INFO]     | 🏁 [Worker-1] Procesando: Macul | Rol: 9064-112
+13:01:19 | paso2_hp | [INFO]     | 🔎 Buscando: Macul | Rol: 9064-112 | Tipo: Departamento
+13:01:20 | paso2_hp | [INFO]     |    ➡️ Navegando a URL de búsqueda...
+13:01:20 | paso2_hp | [INFO]     |    🖱️ Seleccionando comuna...
+13:01:20 | paso2_hp | [INFO]     |    ⌨️ Ingresando Rol 9064-112...
+13:01:20 | server_api | [INFO]     | 📊 [MONITOR f6c2] RAM: 773.8MB (46.5%) | CPU: 0.0% | Chrome Zombies: 10
+13:01:20 | paso2_hp | [DEBUG]     |    👀 Contenedor viejo detectado (ID: f.3F8E85BCA2F7D1B9AEF059E2B072A4BA.d.E5DEFBE52B4258F21355089DF9402BB3.e.156).
+13:01:20 | paso2_hp | [INFO]     |    🖱️ Click en botón Buscar...
+13:01:20 | paso2_hp | [INFO]     |    🚀 Request enviado para Rol: 9064-112...
+13:01:22 | server_api | [INFO]     | 📊 [MONITOR f6c2] RAM: 783.62MB (46.5%) | CPU: 0.0% | Chrome Zombies: 10
+INFO:     127.0.0.1:1168 - "GET /status/f6c240bd-1ca7-4f50-8d70-acb30770f2dd HTTP/1.1" 200 OK
+13:01:24 | server_api | [INFO]     | 📊 [MONITOR f6c2] RAM: 752.33MB (46.5%) | CPU: 0.0% | Chrome Zombies: 10
+13:01:25 | paso2_hp | [DEBUG]     |    🔄 Contenedor antiguo destruido (DOM Refresh iniciado).
+13:01:25 | paso2_hp | [DEBUG]     |    🆕 Nuevo contenedor 'property_list' cargado exitosamente.
+13:01:25 | paso2_hp | [INFO]     |    🔢 Resultados encontrados según atributo: 300
+13:01:26 | server_api | [INFO]     | 📊 [MONITOR f6c2] RAM: 754.89MB (46.5%) | CPU: 0.0% | Chrome Zombies: 10
+INFO:     127.0.0.1:4148 - "GET /status/f6c240bd-1ca7-4f50-8d70-acb30770f2dd HTTP/1.1" 200 OK
+13:01:27 | paso2_hp | [DEBUG]     |    📍 Centroide calculado: -33.49745, -70.58630
+13:01:27 | paso2_hp | [INFO]     |    --- 🔄 Cambiando a fuente: Compraventas ---
+13:01:27 | paso2_hp | [DEBUG]     |      ⏳ Esperando recarga de filtro Compraventas...
+13:01:28 | server_api | [INFO]     | 📊 [MONITOR f6c2] RAM: 757.33MB (46.6%) | CPU: 0.0% | Chrome Zombies: 10
+13:01:30 | server_api | [INFO]     | 📊 [MONITOR f6c2] RAM: 755.93MB (46.6%) | CPU: 0.0% | Chrome Zombies: 10
+INFO:     127.0.0.1:4150 - "GET /status/f6c240bd-1ca7-4f50-8d70-acb30770f2dd HTTP/1.1" 200 OK
+13:01:32 | paso2_hp | [DEBUG]     |      🔽 Orden aplicado: Año descendente
+13:01:32 | paso2_hp | [DEBUG]     |    🧩 [BS4] Iniciando parsing HTML para 'Compraventas'. Cards detectadas: 50
+13:01:32 | paso2_hp | [DEBUG]     |    ✨ [BS4] Parsing finalizado. 50 propiedades extraídas correctamente.
+13:01:32 | paso2_hp | [DEBUG]     |      📐 Calculando distancias para 50 propiedades válidas...
+13:01:32 | paso2_hp | [SUCCESS]     |      📥 Se agregaron 10 propiedades válidas (Top 10 más cercanas) de Compraventas
+13:01:32 | paso2_hp | [INFO]     |    --- 🔄 Cambiando a fuente: Ofertas ---
+13:01:32 | paso2_hp | [DEBUG]     |      ⏳ Esperando recarga de filtro Ofertas...
+13:01:32 | server_api | [INFO]     | 📊 [MONITOR f6c2] RAM: 759.02MB (46.6%) | CPU: 0.0% | Chrome Zombies: 10
+13:01:34 | server_api | [INFO]     | 📊 [MONITOR f6c2] RAM: 833.22MB (46.7%) | CPU: 0.0% | Chrome Zombies: 10
+INFO:     127.0.0.1:4152 - "GET /status/f6c240bd-1ca7-4f50-8d70-acb30770f2dd HTTP/1.1" 200 OK
+13:01:36 | server_api | [INFO]     | 📊 [MONITOR f6c2] RAM: 774.64MB (46.7%) | CPU: 0.0% | Chrome Zombies: 10
+13:01:37 | paso2_hp | [DEBUG]     |      🔽 Orden aplicado: Año descendente
+13:01:37 | paso2_hp | [DEBUG]     |    🧩 [BS4] Iniciando parsing HTML para 'Ofertas'. Cards detectadas: 50
+13:01:37 | paso2_hp | [DEBUG]     |    ✨ [BS4] Parsing finalizado. 50 propiedades extraídas correctamente.
+13:01:37 | paso2_hp | [ERROR]     |      ❌ [DOM INCOMPLETO] 50 cards en Ofertas pero NINGUNA tiene link. Forzando recarga.
+13:01:37 | paso2_hp | [ERROR]     | Ellipsis
+13:01:37 | paso2_hp | [WARNING]     | 🔄 [Worker-1] Fallo intento 1/3 para 9064-112. Reintentando en 5s... (Error: Error técnico: DOM_INCOMPLETO_LINK_FALTANTE)
+13:01:38 | server_api | [INFO]     | 📊 [MONITOR f6c2] RAM: 766.8MB (46.7%) | CPU: 0.0% | Chrome Zombies: 10
+INFO:     127.0.0.1:4154 - "GET /status/f6c240bd-1ca7-4f50-8d70-acb30770f2dd HTTP/1.1" 200 OK
+13:01:40 | server_api | [INFO]     | 📊 [MONITOR f6c2] RAM: 767.49MB (46.7%) | CPU: 0.0% | Chrome Zombies: 10
+13:01:42 | server_api | [INFO]     | 📊 [MONITOR f6c2] RAM: 829.84MB (46.8%) | CPU: 0.0% | Chrome Zombies: 10
+INFO:     127.0.0.1:35294 - "GET /status/f6c240bd-1ca7-4f50-8d70-acb30770f2dd HTTP/1.1" 200 OK
+13:01:42 | paso2_hp | [INFO]     | 🔎 Buscando: Macul | Rol: 9064-112 | Tipo: Departamento
+13:01:43 | paso2_hp | [INFO]     |    ➡️ Navegando a URL de búsqueda...
+13:01:43 | paso2_hp | [INFO]     |    🖱️ Seleccionando comuna...
+13:01:43 | paso2_hp | [INFO]     |    ⌨️ Ingresando Rol 9064-112...
+13:01:43 | paso2_hp | [DEBUG]     |    👀 Contenedor viejo detectado (ID: f.3F8E85BCA2F7D1B9AEF059E2B072A4BA.d.C750EF0936A612CBB3547FB161E009B3.e.458).
+13:01:43 | paso2_hp | [INFO]     |    🖱️ Click en botón Buscar...
+13:01:43 | paso2_hp | [INFO]     |    🚀 Request enviado para Rol: 9064-112...
+13:01:44 | server_api | [INFO]     | 📊 [MONITOR f6c2] RAM: 854.48MB (46.9%) | CPU: 0.0% | Chrome Zombies: 10
+13:01:46 | server_api | [INFO]     | 📊 [MONITOR f6c2] RAM: 849.34MB (46.8%) | CPU: 0.0% | Chrome Zombies: 10
+INFO:     127.0.0.1:33867 - "GET /status/f6c240bd-1ca7-4f50-8d70-acb30770f2dd HTTP/1.1" 200 OK
+13:01:47 | paso2_hp | [DEBUG]     |    🔄 Contenedor antiguo destruido (DOM Refresh iniciado).
+13:01:47 | paso2_hp | [DEBUG]     |    🆕 Nuevo contenedor 'property_list' cargado exitosamente.
+13:01:47 | paso2_hp | [INFO]     |    🔢 Resultados encontrados según atributo: 300
+13:01:48 | server_api | [INFO]     | 📊 [MONITOR f6c2] RAM: 848.21MB (46.8%) | CPU: 0.0% | Chrome Zombies: 10
+13:01:49 | paso2_hp | [DEBUG]     |    📍 Centroide calculado: -33.49745, -70.58630
+13:01:49 | paso2_hp | [INFO]     |    --- 🔄 Cambiando a fuente: Compraventas ---
+13:01:49 | paso2_hp | [DEBUG]     |      ⏳ Esperando recarga de filtro Compraventas...
+13:01:50 | server_api | [INFO]     | 📊 [MONITOR f6c2] RAM: 845.34MB (46.8%) | CPU: 0.0% | Chrome Zombies: 10
+INFO:     127.0.0.1:33869 - "GET /status/f6c240bd-1ca7-4f50-8d70-acb30770f2dd HTTP/1.1" 200 OK
+13:01:52 | server_api | [INFO]     | 📊 [MONITOR f6c2] RAM: 847.88MB (46.7%) | CPU: 0.0% | Chrome Zombies: 10
+13:01:54 | paso2_hp | [DEBUG]     |      🔽 Orden aplicado: Año descendente
+13:01:54 | paso2_hp | [DEBUG]     |    🧩 [BS4] Iniciando parsing HTML para 'Compraventas'. Cards detectadas: 50
+13:01:54 | paso2_hp | [DEBUG]     |    ✨ [BS4] Parsing finalizado. 50 propiedades extraídas correctamente.
+13:01:54 | paso2_hp | [DEBUG]     |      📐 Calculando distancias para 50 propiedades válidas...
+13:01:54 | paso2_hp | [SUCCESS]     |      📥 Se agregaron 10 propiedades válidas (Top 10 más cercanas) de Compraventas
+13:01:54 | paso2_hp | [INFO]     |    --- 🔄 Cambiando a fuente: Ofertas ---
+13:01:54 | paso2_hp | [DEBUG]     |      ⏳ Esperando recarga de filtro Ofertas...
+13:01:54 | server_api | [INFO]     | 📊 [MONITOR f6c2] RAM: 847.16MB (46.7%) | CPU: 0.0% | Chrome Zombies: 10
+INFO:     127.0.0.1:33871 - "GET /status/f6c240bd-1ca7-4f50-8d70-acb30770f2dd HTTP/1.1" 200 OK
+13:01:56 | server_api | [INFO]     | 📊 [MONITOR f6c2] RAM: 833.36MB (46.7%) | CPU: 0.0% | Chrome Zombies: 10
+13:01:58 | server_api | [INFO]     | 📊 [MONITOR f6c2] RAM: 832.95MB (46.7%) | CPU: 0.0% | Chrome Zombies: 10
+INFO:     127.0.0.1:33873 - "GET /status/f6c240bd-1ca7-4f50-8d70-acb30770f2dd HTTP/1.1" 200 OK
+13:01:59 | paso2_hp | [DEBUG]     |      🔽 Orden aplicado: Año descendente
+13:01:59 | paso2_hp | [DEBUG]     |    🧩 [BS4] Iniciando parsing HTML para 'Ofertas'. Cards detectadas: 50
+13:01:59 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:01:59 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:01:59 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:01:59 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:01:59 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:01:59 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:01:59 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:01:59 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:01:59 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:01:59 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:01:59 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:01:59 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:01:59 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:01:59 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:01:59 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:01:59 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:01:59 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:01:59 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:01:59 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:01:59 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:01:59 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:01:59 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:01:59 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:01:59 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:01:59 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:01:59 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:01:59 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:01:59 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:01:59 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:01:59 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:01:59 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:01:59 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:01:59 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:01:59 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:01:59 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:01:59 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:01:59 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:01:59 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:01:59 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:01:59 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:01:59 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:01:59 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:01:59 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:01:59 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:01:59 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:01:59 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:01:59 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:01:59 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:01:59 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:01:59 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:01:59 | paso2_hp | [DEBUG]     |    ✨ [BS4] Parsing finalizado. 50 propiedades extraídas correctamente.
+13:01:59 | paso2_hp | [DEBUG]     |      📐 Calculando distancias para 50 propiedades válidas...
+13:01:59 | paso2_hp | [SUCCESS]     |      📥 Se agregaron 10 propiedades válidas (Top 10 más cercanas) de Ofertas
+13:02:00 | server_api | [INFO]     | 📊 [MONITOR f6c2] RAM: 836.6MB (46.7%) | CPU: 0.0% | Chrome Zombies: 10
+13:02:02 | server_api | [INFO]     | 📊 [MONITOR f6c2] RAM: 135.36MB (45.3%) | CPU: 0.0% | Chrome Zombies: 0
+13:02:02 | paso2_hp | [INFO]     | 👋 [Worker-1] Sesión cerrada.
+13:02:02 | paso2_hp | [SUCCESS]     | 🏁 Proceso finalizado. Propiedades procesadas: 1/1
+13:02:02 | main_hp | [INFO]     | ✅ Paso 2 completado. 1 propiedades perfectas listas para DB/Excel.
+13:02:02 | main_hp | [INFO]     | >>> EJECUTANDO PASO 3: Generación de Excel...
+13:02:02 | paso3_excel | [INFO]     | ⏩ Generación de Excel desactivada (flag crear_excel=False). Saltando paso.
+13:02:02 | main_hp | [INFO]     | >>> EJECUTANDO PASO 4: Inyección a Base de Datos...
+13:02:02 | paso4_hp | [INFO]     | 💾 PASO 4: Iniciando inyección a Base de Datos...
+13:02:02 | paso4_hp | [INFO]     | 📊 Total de propiedades a procesar: 1
+13:02:02 | paso4_hp | [INFO]     | 👉 [1/1] Procesando UID: 12b4e928-5032-4549-96cd-69ea7ae9c0c1 | Rol: 9064-112
+13:02:02 | paso4_hp | [DEBUG]     |      🔍 Metadata: Archivo='Macul_9064-112.pdf' | Link Informe=✅ Presente
+13:02:02 | paso4_hp | [DEBUG]     |      ✅ Tabla 'propiedades' insertada correctamente.
+13:02:02 | paso4_hp | [DEBUG]     |      🏗️ Insertando 1 registros en 'construcciones'...
+13:02:02 | paso4_hp | [DEBUG]     |      🔗 Insertando 2 registros en 'roles_asociados'...
+13:02:02 | paso4_hp | [DEBUG]     |      💰 Insertada deuda TGR para rol principal.
+13:02:02 | paso4_hp | [INFO]     |      👀 [DEBUG] Se encontraron 20 comparables. Insertando...
+INFO:     127.0.0.1:33879 - "GET /status/f6c240bd-1ca7-4f50-8d70-acb30770f2dd HTTP/1.1" 200 OK
+13:02:03 | paso4_hp | [SUCCESS]     | ✅ Inyección completada: 1 propiedades guardadas en BD.
+13:02:03 | paso4_hp | [INFO]     | 🔌 Conexión a BD cerrada.
+13:02:03 | main_hp | [INFO]     | ✅ Paso 4 completado.
+13:02:03 | main_hp | [INFO]     | >>> FINALIZANDO: Moviendo archivos y limpieza...
+13:02:03 | main_hp | [INFO]     | ⏩ Se omitió la creación del Excel por configuración. Solo se guardará el JSON.
+13:02:03 | main_hp | [INFO]     | 📂 JSON Raw guardado en: house_pricing_outputs\Reporte_HousePricing_2026-03-06_27973e.json
+13:02:03 | main_hp | [INFO]     | 🧹 Ejecutando limpieza de archivos temporales...
+13:02:03 | main_hp | [INFO]     |    -> Eliminado: temp_paso1.json
+13:02:03 | main_hp | [INFO]     |    -> Carpeta eliminada: ./input_pdfs
+13:02:03 | main_hp | [INFO]     |    -> Carpeta recreada: ./input_pdfs
+13:02:03 | main_hp | [INFO]     | 🎉 === PROCESO FINALIZADO CON ÉXITO === 🎉
+13:02:03 | server_api | [INFO]     | 📊 Task f6c240bd-1ca7-4f50-8d70-acb30770f2dd: 100% - Proceso Completado Exitosamente
+13:02:03 | server_api | [WARNING]     | ⚠️ Proceso OK. No se vinculó Excel (probablemente desactivado).
+INFO:     127.0.0.1:33881 - "GET /status/f6c240bd-1ca7-4f50-8d70-acb30770f2dd HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33883 - "GET /status/f6c240bd-1ca7-4f50-8d70-acb30770f2dd HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33885 - "POST /process-json HTTP/1.1" 200 OK
+13:02:11 | server_api | [INFO]     | 🚀 [API] Iniciando tarea d6f5be97-be88-4427-93f7-5cf6e4a865f0 con archivo: C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\uploads\d6f5be97-be88-4427-93f7-5cf6e4a865f0_data.csv
+13:02:11 | server_api | [INFO]     | 🚦 [API] Tarea d6f5be97-be88-4427-93f7-5cf6e4a865f0 esperando su turno...
+13:02:11 | server_api | [INFO]     | 🟢 [API] Turno concedido a d6f5be97-be88-4427-93f7-5cf6e4a865f0. Iniciando...
+13:02:11 | server_api | [INFO]     | 📊 [MONITOR d6f5] RAM: 135.45MB (45.3%) | CPU: 0.0% | Chrome Zombies: 0
+13:02:11 | main_hp | [INFO]     | === INICIO DEL FLUJO DE TASACIÓN ===
+13:02:11 | main_hp | [INFO]     | >>> EJECUTANDO PASO 0: Descarga automática desde C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\uploads\d6f5be97-be88-4427-93f7-5cf6e4a865f0_data.csv...
+13:02:11 | paso0_hp | [INFO]     | === PASO 0: INICIO DEL FLUJO DE DESCARGAS ===
+13:02:11 | paso0_hp | [INFO]     | 📂 Archivo de entrada: C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\uploads\d6f5be97-be88-4427-93f7-5cf6e4a865f0_data.csv
+13:02:11 | paso0_hp | [INFO]     | 📂 Intentando cargar archivo origen: C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\uploads\d6f5be97-be88-4427-93f7-5cf6e4a865f0_data.csv
+13:02:11 | paso0_hp | [DEBUG]     |    📄 Formato detectado: CSV
+13:02:11 | paso0_hp | [INFO]     |    ✅ Archivo cargado. Filas encontradas: 2
+13:02:11 | paso0_hp | [DEBUG]     | 🧹 Estandarizando y limpiando datos de entrada...
+13:02:11 | paso0_hp | [WARNING]     |    ⚠️ Rol duplicado omitido para optimizar recursos: 9064-112
+13:02:11 | paso0_hp | [INFO]     | ✅ Datos listos para procesar: 1 propiedades.
+13:02:11 | paso0_hp | [INFO]     | 🚀 Iniciando ciclo de descargas PARALELO para 1 propiedades. WORKERS=2
+13:02:11 | paso0_hp | [INFO]     | 🔧 Configurando Driver Chrome (Opciones y Preferencias - Modo Ahorro)...
+13:02:11 | paso0_hp | [DEBUG]     |    📂 Carpeta de descargas configurada: C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\input_pdfs\temp_1
+13:02:11 | paso0_hp | [DEBUG]     | informacion de configuracion del driver: <selenium.webdriver.chrome.options.Options object at 0x0000027B868C9E10>
+13:02:12 | paso0_hp | [INFO]     | 🔐 Iniciando proceso de Login...
+13:02:12 | paso0_hp | [DEBUG]     |    ⌨️ Ingresando credenciales...
+13:02:13 | server_api | [INFO]     | 📊 [MONITOR d6f5] RAM: 683.64MB (46.3%) | CPU: 0.0% | Chrome Zombies: 11
+INFO:     127.0.0.1:54628 - "GET /status/d6f5be97-be88-4427-93f7-5cf6e4a865f0 HTTP/1.1" 200 OK
+13:02:13 | paso0_hp | [DEBUG]     |    ⏳ Esperando redirección post-login...
+13:02:14 | paso0_hp | [SUCCESS]     | ✅ Login exitoso. Sesión iniciada.
+13:02:14 | paso0_hp | [INFO]     | 🔎 Procesando descarga: Macul - Rol 9064-112
+13:02:15 | server_api | [INFO]     | 📊 [MONITOR d6f5] RAM: 789.49MB (46.5%) | CPU: 0.0% | Chrome Zombies: 11
+13:02:15 | paso0_hp | [DEBUG]     |    🏙️ Seleccionando comuna 'Macul'...
+13:02:15 | paso0_hp | [DEBUG]     |  buscando elemento por ID
+13:02:15 | paso0_hp | [DEBUG]     |  limpiando campo:
+13:02:15 | paso0_hp | [DEBUG]     |  ingresando rol: 9064-112
+13:02:15 | paso0_hp | [DEBUG]     |  CLICK BUSCAR
+13:02:15 | paso0_hp | [DEBUG]     |    ⏳ Validando existencia del rol...
+13:02:16 | paso0_hp | [DEBUG]     |    ⏳ Esperando confirmación de propiedad (Botón Generar)...
+13:02:16 | paso0_hp | [DEBUG]     |  CLICK GENERAR
+13:02:16 | paso0_hp | [DEBUG]     |    ⏳ Esperando que el servidor genere el PDF (Timeout: 150s)...
+13:02:17 | server_api | [INFO]     | 📊 [MONITOR d6f5] RAM: 839.79MB (46.6%) | CPU: 0.0% | Chrome Zombies: 11
+INFO:     127.0.0.1:50061 - "GET /status/d6f5be97-be88-4427-93f7-5cf6e4a865f0 HTTP/1.1" 200 OK
+13:02:19 | server_api | [INFO]     | 📊 [MONITOR d6f5] RAM: 793.77MB (46.6%) | CPU: 0.0% | Chrome Zombies: 10
+13:02:21 | server_api | [INFO]     | 📊 [MONITOR d6f5] RAM: 757.77MB (46.5%) | CPU: 0.0% | Chrome Zombies: 10
+INFO:     127.0.0.1:45951 - "GET /status/d6f5be97-be88-4427-93f7-5cf6e4a865f0 HTTP/1.1" 200 OK
+13:02:23 | server_api | [INFO]     | 📊 [MONITOR d6f5] RAM: 720.33MB (46.4%) | CPU: 0.0% | Chrome Zombies: 10
+13:02:25 | server_api | [INFO]     | 📊 [MONITOR d6f5] RAM: 726.23MB (46.5%) | CPU: 0.0% | Chrome Zombies: 10
+INFO:     127.0.0.1:61476 - "GET /status/d6f5be97-be88-4427-93f7-5cf6e4a865f0 HTTP/1.1" 200 OK
+13:02:26 | paso0_hp | [DEBUG]     |    🔗 Link detectado: https://storage.googleapis.com/public-housepricing/informe_antecedentes/HousePricing_informe_antecedentes_9064_112_15151_IA2026030616021639314.pdf
+13:02:26 | paso0_hp | [DEBUG]     |  CLICK DESCARGAR
+13:02:26 | paso0_hp | [INFO]     |    📥 Informe listo. Click en Descargar PDF...
+13:02:26 | paso0_hp | [DEBUG]     |    ⏳ Monitoreando carpeta C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\input_pdfs\temp_1 (Timeout: 30s)...
+13:02:27 | server_api | [INFO]     | 📊 [MONITOR d6f5] RAM: 740.66MB (46.5%) | CPU: 0.0% | Chrome Zombies: 11
+13:02:28 | paso0_hp | [DEBUG]     |    📄 Archivo detectado: HousePricing_informe_antecedentes_9064_112_15151_IA2026030616021639314.pdf
+13:02:28 | paso0_hp | [DEBUG]     |  MOVIMIENTO ARCHIVO
+13:02:28 | paso0_hp | [DEBUG]     |  Reintentos en mover el archivo: 1
+13:02:28 | paso0_hp | [INFO]     |    💰 Iniciando búsqueda en Tasador para 9064-112 (Macul)...
+13:02:29 | server_api | [INFO]     | 📊 [MONITOR d6f5] RAM: 715.25MB (46.5%) | CPU: 0.0% | Chrome Zombies: 10
+INFO:     127.0.0.1:59199 - "GET /status/d6f5be97-be88-4427-93f7-5cf6e4a865f0 HTTP/1.1" 200 OK
+13:02:30 | paso0_hp | [DEBUG]     |    🖱️ [Intento 1] Click en Buscar Tasación...
+13:02:30 | paso0_hp | [SUCCESS]     |    ✅ Tasador: Propiedad encontrada. Iniciando secuencia de Wizard...
+13:02:30 | paso0_hp | [DEBUG]     |    🚀 Wizard: Paso 3 completado (Ver Tasación). Esperando carga final...
+13:02:31 | server_api | [INFO]     | 📊 [MONITOR d6f5] RAM: 861.83MB (46.8%) | CPU: 0.0% | Chrome Zombies: 10
+13:02:32 | paso0_hp | [INFO]     | Valor vta CLP extraido: $ 129.222.786
+13:02:32 | paso0_hp | [INFO]     | Valor vta UF extraido: UF 3.248
+13:02:32 | paso0_hp | [INFO]     | Valor arr CLP extraido: $ 500.472
+13:02:32 | paso0_hp | [INFO]     | Valor arr UF extraido: UF 12,58
+13:02:32 | paso0_hp | [SUCCESS]     |      💵 Venta: $129222786 (3248 UF) | Arriendo: $500472
+{'tasa_vta_clp': 129222786, 'tasa_vta_uf': '3248', 'tasa_arr_clp': 500472, 'tasa_arr_uf': '12,58'}
+13:02:32 | paso0_hp | [SUCCESS]     |    ✅ Descarga completada: Macul_9064-112.pdf
+13:02:33 | server_api | [INFO]     | 📊 [MONITOR d6f5] RAM: 136.07MB (45.4%) | CPU: 0.0% | Chrome Zombies: 0
+INFO:     127.0.0.1:45542 - "GET /status/d6f5be97-be88-4427-93f7-5cf6e4a865f0 HTTP/1.1" 200 OK
+13:02:34 | paso0_hp | [INFO]     | ============================================================
+13:02:34 | paso0_hp | [INFO]     | 📊 REPORTE FINAL DE DESCARGAS
+13:02:34 | paso0_hp | [INFO]     |    - Total Intentados: 1
+13:02:34 | paso0_hp | [INFO]     |    - Descargados OK:   1
+13:02:34 | paso0_hp | [INFO]     |    - Fallidos:         0
+13:02:34 | paso0_hp | [INFO]     | ============================================================
+13:02:34 | paso0_hp | [INFO]     | ============================================================
+13:02:34 | paso0_hp | [SUCCESS]     | 🏁 Proceso finalizado. Descargas exitosas: 1/1
+13:02:34 | main_hp | [INFO]     | ✅ Paso 0 completado. PDFs listos en carpeta de entrada.
+13:02:34 | main_hp | [INFO]     | >>> EJECUTANDO PASO 1: Extracción masiva de PDFs...
+13:02:34 | paso1_hp | [INFO]     | 🏁 Iniciando proceso de lote en: ./input_pdfs
+13:02:34 | paso1_hp | [INFO]     | 📂 Archivos encontrados: 1
+13:02:34 | paso1_hp | [INFO]     | 👉 [1/1] Procesando: Macul_9064-112.pdf
+13:02:34 | paso1_hp | [DEBUG]     |    📖 Abierto Macul_9064-112.pdf con pdfplumber (4 páginas)
+13:02:34 | paso1_hp | [INFO]     | --- 📡 INICIANDO MAPEO DE LINKS (COORDENADAS) ---
+13:02:34 | paso1_hp | [DEBUG]     | 📄 Procesando página 1 para mapeo de links...
+13:02:34 | paso1_hp | [INFO]     |    ↳ Página 1: 2 hipervínculos detectados | 33 palabras detectadas.
+13:02:34 | paso1_hp | [DEBUG]     |    ↳ Candidatos a Rol encontrados en pág 1: 1
+13:02:34 | paso1_hp | [DEBUG]     |      ⚠️ Sin link cercano para 9064-112 (Revisar tolerancias)
+13:02:34 | paso1_hp | [DEBUG]     | 📄 Procesando página 2 para mapeo de links...
+13:02:34 | paso1_hp | [INFO]     |    ↳ Página 2: 1 hipervínculos detectados | 51 palabras detectadas.
+13:02:34 | paso1_hp | [DEBUG]     |    ↳ Candidatos a Rol encontrados en pág 2: 0
+13:02:34 | paso1_hp | [DEBUG]     | 📄 Procesando página 3 para mapeo de links...
+13:02:34 | paso1_hp | [INFO]     |    ↳ Página 3: 3 hipervínculos detectados | 71 palabras detectadas.
+13:02:34 | paso1_hp | [DEBUG]     |    ↳ Candidatos a Rol encontrados en pág 3: 5
+13:02:34 | paso1_hp | [DEBUG]     |      ⚠️ Sin link cercano para 9064-927 (Revisar tolerancias)
+13:02:34 | paso1_hp | [DEBUG]     |      ⚠️ Sin link cercano para 9064-775 (Revisar tolerancias)
+13:02:34 | paso1_hp | [DEBUG]     |      ✅ MATCH POTENCIAL para 9064-112: Distancia Vert: 5.08
+13:02:34 | paso1_hp | [SUCCESS]     |    🎯 LINK ASIGNADO A 9064-112 -> https://storage.googleapis.com/public-housepricing/informe_deuda_contribuciones/informe_deuda_contribuciones_13_323_9064_112_8681.pdf
+13:02:34 | paso1_hp | [DEBUG]     |      ✅ MATCH POTENCIAL para 9064-927: Distancia Vert: 5.08
+13:02:34 | paso1_hp | [SUCCESS]     |    🎯 LINK ASIGNADO A 9064-927 -> https://storage.googleapis.com/public-housepricing/informe_deuda_contribuciones/informe_deuda_contribuciones_13_323_9064_927_3410.pdf
+13:02:34 | paso1_hp | [DEBUG]     |      ✅ MATCH POTENCIAL para 9064-775: Distancia Vert: 5.08
+13:02:34 | paso1_hp | [SUCCESS]     |    🎯 LINK ASIGNADO A 9064-775 -> https://storage.googleapis.com/public-housepricing/informe_deuda_contribuciones/informe_deuda_contribuciones_13_323_9064_775_884.pdf
+13:02:34 | paso1_hp | [DEBUG]     | 📄 Procesando página 4 para mapeo de links...
+13:02:34 | paso1_hp | [INFO]     |    ↳ Página 4: 0 hipervínculos detectados | 43 palabras detectadas.
+13:02:34 | paso1_hp | [DEBUG]     |    ↳ Candidatos a Rol encontrados en pág 4: 0
+13:02:34 | paso1_hp | [INFO]     | --- FIN MAPEO LINKS: 3 roles mapeados ---
+13:02:34 | paso1_hp | [DEBUG]     | 🧠 Iniciando parseo de texto plano...
+13:02:34 | paso1_hp | [DEBUG]     |    ↳ Total líneas extraídas: 241
+13:02:34 | paso1_hp | [DEBUG]     |    🗺️ Dirección encontrada: AV. A. VESPUCIO     4455  DP  1109  D
+13:02:34 | paso1_hp | [DEBUG]     |    📍 Comuna Detectada: Macul
+13:02:34 | paso1_hp | [INFO]     |    🏠 Rol Propiedad Detectado: 9064-112
+13:02:34 | paso1_hp | [DEBUG]     |    👤 Propietario: DIAZ TAPIA CRISTINA ALEJANDRA
+13:02:34 | paso1_hp | [DEBUG]     |    🔍 Analizando sección Roles CBR...
+13:02:34 | paso1_hp | [INFO]     |    📚 Roles CBR extraídos: 2
+13:02:34 | paso1_hp | [DEBUG]     |    ⚙️ Ejecutando Regex Globales (Características)...
+13:02:34 | paso1_hp | [DEBUG]     |    ℹ️ M2 Terreno no detectado, usando M2 Construcción como fallback.
+13:02:34 | paso1_hp | [DEBUG]     |    💰 Buscando Deudas y cruzando con Link Map...
+13:02:34 | paso1_hp | [SUCCESS]     |      ✅ Deuda asociada a link: 9064-112 -> $0
+13:02:34 | paso1_hp | [SUCCESS]     |      ✅ Deuda asociada a link: 9064-927 -> $9.018
+13:02:34 | paso1_hp | [SUCCESS]     |      ✅ Deuda asociada a link: 9064-775 -> $123.682
+13:02:34 | paso1_hp | [DEBUG]     |    👥 Transacción: 1 compradores / 1 vendedores.
+13:02:34 | paso1_hp | [DEBUG]     |      ✅ Metadata y Tasación recuperadas para Rol 9064-112.
+13:02:34 | paso1_hp | [SUCCESS]     | ✅ ÉXITO: Macul_9064-112.pdf procesado y datos estructurados.
+13:02:34 | paso1_hp | [SUCCESS]     | 🎉 Proceso de lote finalizado. Total extraídos: 1
+13:02:34 | main_hp | [INFO]     | ✅ Paso 1 completado. 1 propiedades extraídas.
+13:02:34 | main_hp | [INFO]     | >>> EJECUTANDO PASO 2: Búsqueda de mercado (Selenium)...
+13:02:34 | paso2_hp | [INFO]     | 🚀 Iniciando orquestador Selenium PARALELO para 1 propiedades. WORKERS=2
+13:02:34 | paso2_hp | [INFO]     | 👷 [Worker-1] Iniciando sesión Selenium...
+13:02:35 | server_api | [INFO]     | 📊 [MONITOR d6f5] RAM: 152.7MB (45.4%) | CPU: 0.0% | Chrome Zombies: 1
+13:02:35 | paso2_hp | [INFO]     | 🔐 [Worker-1] Logueando en HousePricing...
+13:02:36 | paso2_hp | [DEBUG]     |    ➡️ Navegando a URL de login...
+13:02:36 | paso2_hp | [DEBUG]     |    ➡️ Ingresando correo...
+13:02:36 | paso2_hp | [DEBUG]     |    ➡️ Ingresando contraseña...
+13:02:36 | paso2_hp | [DEBUG]     |    ➡️ Clickando botón de login...
+13:02:37 | server_api | [INFO]     | 📊 [MONITOR d6f5] RAM: 688.16MB (46.3%) | CPU: 0.0% | Chrome Zombies: 11
+INFO:     127.0.0.1:37467 - "GET /status/d6f5be97-be88-4427-93f7-5cf6e4a865f0 HTTP/1.1" 200 OK
+13:02:38 | paso2_hp | [SUCCESS]     | ✅ [Worker-1] Login exitoso.
+13:02:38 | paso2_hp | [DEBUG]     |    ➡️ Esperando que se refrezque la página...
+13:02:39 | server_api | [INFO]     | 📊 [MONITOR d6f5] RAM: 789.01MB (46.5%) | CPU: 0.0% | Chrome Zombies: 11
+13:02:40 | paso2_hp | [INFO]     | 🏁 [Worker-1] Procesando: Macul | Rol: 9064-112
+13:02:40 | paso2_hp | [INFO]     | 🔎 Buscando: Macul | Rol: 9064-112 | Tipo: Departamento
+13:02:40 | paso2_hp | [INFO]     |    ➡️ Navegando a URL de búsqueda...
+13:02:41 | paso2_hp | [INFO]     |    🖱️ Seleccionando comuna...
+13:02:41 | paso2_hp | [INFO]     |    ⌨️ Ingresando Rol 9064-112...
+13:02:41 | paso2_hp | [DEBUG]     |    👀 Contenedor viejo detectado (ID: f.7C6F2B61CE9B2BE77B49198011F6906B.d.F8E18596D4706790018DD1268E99DD37.e.152).
+13:02:41 | paso2_hp | [INFO]     |    🖱️ Click en botón Buscar...
+13:02:41 | server_api | [INFO]     | 📊 [MONITOR d6f5] RAM: 811.51MB (46.7%) | CPU: 0.0% | Chrome Zombies: 10
+13:02:41 | paso2_hp | [INFO]     |    🚀 Request enviado para Rol: 9064-112...
+INFO:     127.0.0.1:19836 - "GET /status/d6f5be97-be88-4427-93f7-5cf6e4a865f0 HTTP/1.1" 200 OK
+13:02:43 | server_api | [INFO]     | 📊 [MONITOR d6f5] RAM: 818.78MB (46.7%) | CPU: 0.0% | Chrome Zombies: 10
+13:02:44 | paso2_hp | [DEBUG]     |    🔄 Contenedor antiguo destruido (DOM Refresh iniciado).
+13:02:44 | paso2_hp | [DEBUG]     |    🆕 Nuevo contenedor 'property_list' cargado exitosamente.
+13:02:44 | paso2_hp | [INFO]     |    🔢 Resultados encontrados según atributo: 300
+13:02:45 | server_api | [INFO]     | 📊 [MONITOR d6f5] RAM: 787.05MB (46.7%) | CPU: 0.0% | Chrome Zombies: 10
+INFO:     127.0.0.1:49152 - "GET /status/d6f5be97-be88-4427-93f7-5cf6e4a865f0 HTTP/1.1" 200 OK
+13:02:46 | paso2_hp | [DEBUG]     |    📍 Centroide calculado: -33.49745, -70.58630
+13:02:46 | paso2_hp | [INFO]     |    --- 🔄 Cambiando a fuente: Compraventas ---
+13:02:46 | paso2_hp | [DEBUG]     |      ⏳ Esperando recarga de filtro Compraventas...
+13:02:47 | server_api | [INFO]     | 📊 [MONITOR d6f5] RAM: 772.02MB (46.6%) | CPU: 0.0% | Chrome Zombies: 10
+13:02:49 | server_api | [INFO]     | 📊 [MONITOR d6f5] RAM: 788.69MB (46.7%) | CPU: 0.0% | Chrome Zombies: 11
+INFO:     127.0.0.1:13849 - "GET /status/d6f5be97-be88-4427-93f7-5cf6e4a865f0 HTTP/1.1" 200 OK
+13:02:51 | server_api | [INFO]     | 📊 [MONITOR d6f5] RAM: 768.04MB (46.7%) | CPU: 0.0% | Chrome Zombies: 10
+13:02:51 | paso2_hp | [DEBUG]     |      🔽 Orden aplicado: Año descendente
+13:02:52 | paso2_hp | [DEBUG]     |    🧩 [BS4] Iniciando parsing HTML para 'Compraventas'. Cards detectadas: 50
+13:02:52 | paso2_hp | [DEBUG]     |    ✨ [BS4] Parsing finalizado. 50 propiedades extraídas correctamente.
+13:02:52 | paso2_hp | [DEBUG]     |      📐 Calculando distancias para 50 propiedades válidas...
+13:02:52 | paso2_hp | [SUCCESS]     |      📥 Se agregaron 10 propiedades válidas (Top 10 más cercanas) de Compraventas
+13:02:52 | paso2_hp | [INFO]     |    --- 🔄 Cambiando a fuente: Ofertas ---
+13:02:52 | paso2_hp | [DEBUG]     |      ⏳ Esperando recarga de filtro Ofertas...
+13:02:53 | server_api | [INFO]     | 📊 [MONITOR d6f5] RAM: 786.11MB (46.8%) | CPU: 0.0% | Chrome Zombies: 10
+INFO:     127.0.0.1:13852 - "GET /status/d6f5be97-be88-4427-93f7-5cf6e4a865f0 HTTP/1.1" 200 OK
+13:02:55 | server_api | [INFO]     | 📊 [MONITOR d6f5] RAM: 868.88MB (46.9%) | CPU: 0.0% | Chrome Zombies: 10
+13:02:57 | paso2_hp | [DEBUG]     |      🔽 Orden aplicado: Año descendente
+13:02:57 | paso2_hp | [DEBUG]     |    🧩 [BS4] Iniciando parsing HTML para 'Ofertas'. Cards detectadas: 50
+13:02:57 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:02:57 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:02:57 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:02:57 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:02:57 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:02:57 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:02:57 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:02:57 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:02:57 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:02:57 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:02:57 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:02:57 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:02:57 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:02:57 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:02:57 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:02:57 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:02:57 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:02:57 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:02:57 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:02:57 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:02:57 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:02:57 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:02:57 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:02:57 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:02:57 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:02:57 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:02:57 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:02:57 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:02:57 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:02:57 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:02:57 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:02:57 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:02:57 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:02:57 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:02:57 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:02:57 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:02:57 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:02:57 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:02:57 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:02:57 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:02:57 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:02:57 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:02:57 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:02:57 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:02:57 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:02:57 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:02:57 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:02:57 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:02:57 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:02:57 | paso2_hp | [DEBUG]     |        🔗 Link de la publicación detectado en data-name: https://www.portalinmobiliario...
+13:02:57 | paso2_hp | [DEBUG]     |    ✨ [BS4] Parsing finalizado. 50 propiedades extraídas correctamente.
+13:02:57 | paso2_hp | [DEBUG]     |      📐 Calculando distancias para 50 propiedades válidas...
+13:02:57 | paso2_hp | [SUCCESS]     |      📥 Se agregaron 10 propiedades válidas (Top 10 más cercanas) de Ofertas
+13:02:57 | server_api | [INFO]     | 📊 [MONITOR d6f5] RAM: 873.36MB (46.9%) | CPU: 0.0% | Chrome Zombies: 10
+INFO:     127.0.0.1:13854 - "GET /status/d6f5be97-be88-4427-93f7-5cf6e4a865f0 HTTP/1.1" 200 OK
+13:02:59 | server_api | [INFO]     | 📊 [MONITOR d6f5] RAM: 146.91MB (45.5%) | CPU: 0.0% | Chrome Zombies: 0
+13:03:00 | paso2_hp | [INFO]     | 👋 [Worker-1] Sesión cerrada.
+13:03:00 | paso2_hp | [SUCCESS]     | 🏁 Proceso finalizado. Propiedades procesadas: 1/1
+13:03:00 | main_hp | [INFO]     | ✅ Paso 2 completado. 1 propiedades perfectas listas para DB/Excel.
+13:03:00 | main_hp | [INFO]     | >>> EJECUTANDO PASO 3: Generación de Excel...
+13:03:00 | paso3_excel | [INFO]     | ⏩ Generación de Excel desactivada (flag crear_excel=False). Saltando paso.
+13:03:00 | main_hp | [INFO]     | >>> EJECUTANDO PASO 4: Inyección a Base de Datos...
+13:03:00 | paso4_hp | [INFO]     | 💾 PASO 4: Iniciando inyección a Base de Datos...
+13:03:00 | paso4_hp | [INFO]     | 📊 Total de propiedades a procesar: 1
+13:03:00 | paso4_hp | [INFO]     | 👉 [1/1] Procesando UID: d4c71c54-f7b5-4938-84d5-556ab625e1db | Rol: 9064-112
+13:03:00 | paso4_hp | [DEBUG]     |      🔍 Metadata: Archivo='Macul_9064-112.pdf' | Link Informe=✅ Presente
+13:03:00 | paso4_hp | [DEBUG]     |      ✅ Tabla 'propiedades' insertada correctamente.
+13:03:00 | paso4_hp | [DEBUG]     |      🏗️ Insertando 1 registros en 'construcciones'...
+13:03:00 | paso4_hp | [DEBUG]     |      🔗 Insertando 2 registros en 'roles_asociados'...
+13:03:00 | paso4_hp | [DEBUG]     |      💰 Insertada deuda TGR para rol principal.
+13:03:00 | paso4_hp | [INFO]     |      👀 [DEBUG] Se encontraron 20 comparables. Insertando...
+13:03:00 | paso4_hp | [SUCCESS]     | ✅ Inyección completada: 1 propiedades guardadas en BD.
+13:03:00 | paso4_hp | [INFO]     | 🔌 Conexión a BD cerrada.
+13:03:00 | main_hp | [INFO]     | ✅ Paso 4 completado.
+13:03:00 | main_hp | [INFO]     | >>> FINALIZANDO: Moviendo archivos y limpieza...
+13:03:00 | main_hp | [INFO]     | ⏩ Se omitió la creación del Excel por configuración. Solo se guardará el JSON.
+13:03:00 | main_hp | [INFO]     | 📂 JSON Raw guardado en: house_pricing_outputs\Reporte_HousePricing_2026-03-06_a86d12.json
+13:03:00 | main_hp | [INFO]     | 🧹 Ejecutando limpieza de archivos temporales...
+13:03:00 | main_hp | [INFO]     |    -> Eliminado: temp_paso1.json
+13:03:00 | main_hp | [INFO]     |    -> Carpeta eliminada: ./input_pdfs
+13:03:00 | main_hp | [INFO]     |    -> Carpeta recreada: ./input_pdfs
+13:03:00 | main_hp | [INFO]     | 🎉 === PROCESO FINALIZADO CON ÉXITO === 🎉
+13:03:00 | server_api | [INFO]     | 📊 Task d6f5be97-be88-4427-93f7-5cf6e4a865f0: 100% - Proceso Completado Exitosamente
+13:03:00 | server_api | [WARNING]     | ⚠️ Proceso OK. No se vinculó Excel (probablemente desactivado).
+INFO:     127.0.0.1:13860 - "GET /status/d6f5be97-be88-4427-93f7-5cf6e4a865f0 HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [37892]
+
+(env) C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API>py server.py
+13:29:01 | paso0_hp | [ERROR]     | ❌ ERROR CRÍTICO: No se cargaron las URL del archivo .env
+13:29:01 | paso0_hp | [ERROR]     |    URL_ANTECEDENTES: None
+13:29:01 | paso0_hp | [ERROR]     |    URL_LOGIN: None
+Traceback (most recent call last):
+  File "C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\server.py", line 88, in <module>
+    from api import main_hp
+  File "C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\api\main_hp.py", line 8, in <module>
+    from . import paso0_hp, paso1_hp, paso2_hp, paso3_hp, paso4_hp
+  File "C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\api\paso0_hp.py", line 39, in <module>
+    raise ValueError("Faltan variables de entorno en el archivo .env")
+ValueError: Faltan variables de entorno en el archivo .env
+
+(env) C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API>py server.py
+13:29:40 | paso2_hp | [INFO]     | ⚙️ Configuración cargada. Usuario: barbara@grupohouse.cl | Workers: 2
+C:\Users\ignac\Desktop\Proyectos\House-Princing-Extractor-API\server.py:261: DeprecationWarning:
+        on_event is deprecated, use lifespan event handlers instead.
+
+        Read more about it in the
+        [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+
+  @app.on_event("startup")
+13:29:40 | server_api | [INFO]     | 🌍 Iniciando Servidor API House Pricing...
+INFO:     Started server process [12076]
+INFO:     Waiting for application startup.
+13:29:40 | server_api | [INFO]     | Iniciando validación de sistema (BD y Variables)...
+Error DB: 1045 (28000): Access denied for user 'root'@'10.212.136.4' (using password: YES)
+13:29:40 | server_api | [ERROR]     | ❌ ERROR CRÍTICO: No se pudo conectar a la BD al iniciar el servidor.
+❌ ERROR CRÍTICO: No se pudo conectar a la BD al iniciar el servidor.

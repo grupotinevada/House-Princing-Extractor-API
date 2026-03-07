@@ -245,7 +245,9 @@ def ejecutar_proceso_background(task_id: str, file_path: str, cancel_event: thre
         finally:
             stop_monitor_event.set()
             hilo_monitor.join(timeout=1)
-
+            if cancel_event.is_set():
+                tasks[task_id]["status"] = "cancelled"
+                tasks[task_id]["message"] = "Proceso detenido completamente."
             # Limpieza del archivo subido (Input)
             if os.path.exists(file_path):
                 try:
@@ -256,7 +258,28 @@ def ejecutar_proceso_background(task_id: str, file_path: str, cancel_event: thre
 
 
 # --- 4. ENDPOINTS ---
-
+@app.on_event("startup")
+def startup_event():
+    logger.info("Iniciando validación de sistema (BD y Variables)...")
+    # 1. Validar variables de entorno vitales
+    required_envs = ["DB_HOST", "DB_PORT", "DB_USER", "DB_PASSWORD", "DB_NAME", "LOGIN_URL", "URL_ANTECEDENTES", "URL_TASACIONES", "USUARIO_HP", "PASSWORD_HP"]
+    missing = [v for v in required_envs if not os.getenv(v)]
+    if missing:
+        msg = f"❌ ERROR CRÍTICO: Faltan variables en .env: {', '.join(missing)}"
+        logger.error(msg)
+        print(msg)
+        os._exit(1)
+        
+    # 2. Validar conexión a la Base de Datos
+    conn = get_db_connection()
+    if not conn or not conn.is_connected():
+        msg = "❌ ERROR CRÍTICO: No se pudo conectar a la BD al iniciar el servidor."
+        logger.error(msg)
+        print(msg)
+        os._exit(1)
+    conn.close()
+    logger.info("✅ Validaciones de inicio exitosas. API lista.")
+    
 @app.get("/health")
 def health_check():
     """Endpoint para verificar que la API está viva"""
@@ -267,6 +290,11 @@ async def upload_and_process(file: UploadFile = File(...), background_tasks: Bac
     """
     Recibe el archivo Excel/CSV, genera un ID y lanza el proceso en background.
     """
+
+    if not file.filename.lower().endswith(('.csv', '.xlsx', '.xls')):
+        logger.warning(f"Intento de subida bloqueado: {file.filename}")
+        raise HTTPException(status_code=400, detail="Formato de archivo no soportado. Use solo .csv, .xlsx o .xls")
+    
     # Generar ID único
     task_id = str(uuid.uuid4())
     
@@ -399,10 +427,10 @@ def cancel_process(task_id: str):
         event = task.get("cancel_event")
         if event:
             event.set() # Señalizamos a Python para detenerse
-            task["status"] = "cancelled"
-            task["message"] = "Cancelando..."
+            task["status"] = "cancelling" # No mentimos, está en proceso de apagar.
+            task["message"] = "Deteniendo procesos de forma segura... (Puede tardar unos segundos)"
             logger.info(f"🛑 Solicitud de cancelación recibida para {task_id}")
-            return {"message": "Señal de cancelación enviada."}
+            return {"message": "Señal de cancelación enviada. Apagando navegadores..."}
         else:
              return {"message": "El proceso no se pudo cancelar (aún no inicializado)."}
     

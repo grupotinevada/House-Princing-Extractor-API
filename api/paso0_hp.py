@@ -66,11 +66,18 @@ def detectar_y_cargar(ruta_archivo: str) -> Optional[List[Dict[str, Any]]]:
 def estandarizar_data(lista_cruda: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     logger.debug("🧹 Estandarizando y limpiando datos de entrada...")
     lista_limpia = []
+    roles_vistos = set()
+
     for item in lista_cruda:
         r = str(item.get("rol", "")).strip()
         c = str(item.get("comuna", "")).strip()
         if len(r) > 3 and len(c) > 3:
-            lista_limpia.append({"rol": r, "comuna": c})
+            
+            if r not in roles_vistos:
+                lista_limpia.append({"rol": r, "comuna": c})
+                roles_vistos.add(r)
+            else:
+                logger.warning(f"   ⚠️ Rol duplicado omitido para optimizar recursos: {r}")
         else:
             logger.warning(f"   ⚠️ Fila descartada por datos incompletos: Rol='{r}', Comuna='{c}'")
             
