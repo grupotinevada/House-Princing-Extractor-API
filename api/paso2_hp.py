@@ -403,8 +403,8 @@ def procesar_lote_worker(id_worker, sublista_propiedades, cancel_event, callback
     logger.info(f"👷 [Worker-{id_worker}] Iniciando sesión Selenium...")
     
     options = Options()
-    # options.add_argument("--headless=new")
-    # options.add_argument("--disable-gpu")
+    options.add_argument("--headless=new")
+    options.add_argument("--disable-gpu")
     options.add_argument("--disable-extensions")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--no-sandbox")
