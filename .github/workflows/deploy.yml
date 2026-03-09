@@ -14,9 +14,9 @@ jobs:
       - name: Conectar por SSH y Ejecutar Comandos en QA
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.QA_SERVER_HOST }}
-          username: ${{ secrets.QA_SERVER_USER }}
-          key: ${{ secrets.QA_SERVER_SSH_KEY }}
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
             # 1. Moverse a la carpeta exacta en el servidor QA
             cd "/home/soporte/Escritorio/API TEST"
