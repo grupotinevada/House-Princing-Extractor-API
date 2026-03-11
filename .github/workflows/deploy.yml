@@ -1,4 +1,4 @@
-name: Despliegue a QA (Self-Hosted)
+name: Despliegue a QA Pro
 
 on:
   push:
@@ -6,30 +6,65 @@ on:
       - qa
 
 jobs:
-  deploy-qa:
-    name: Desplegar en Servidor QA
-    # Cambiamos 'ubuntu-latest' por tu runner propio
-    runs-on: self-hosted 
+  deploy:
+    name: Desplegar y Monitorear
+    runs-on: self-hosted
 
     steps:
-      # Este paso descarga el código en la carpeta de trabajo del runner
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Ejecutar comandos de despliegue local
+      - name: Actualizar y Reiniciar
+        id: deploy_step
         run: |
-          # 1. Moverse a la carpeta del proyecto
-          # Nota: El runner ya está en el servidor, solo asegúrate de la ruta
           cd "/home/soporte/Escritorio/API TEST"
           
-          # 2. Actualizar código
-          git checkout qa
-          git pull origin qa
+          # 1. Guardar referencia del commit actual por si hay que volver atrás
+          PREVIOUS_COMMIT=$(git rev-parse HEAD)
+          echo "PREVIOUS_COMMIT=$PREVIOUS_COMMIT" >> $GITHUB_ENV
           
-          # 3. Entorno virtual y dependencias
-          # Usamos la ruta completa del env para evitar errores de contexto
+          # 2. Intentar actualización
+          git fetch origin qa
+          git reset --hard origin/qa
+          
+          # 3. Actualizar entorno virtual
           source env/bin/activate
           pip install -r requirements.txt
           
-          # 4. Reiniciar proceso
+          # 4. Gestión inteligente de PM2
+          # Verificamos si el proceso existe
+          if pm2 describe api_hp_test > /dev/null 2>&1; then
+            echo "Reiniciando proceso existente..."
+            pm2 restart api_hp_test --update-env
+          else
+            echo "El proceso no existe. Iniciándolo por primera vez..."
+            # Ajusta 'main.py' al nombre de tu archivo de entrada
+            pm2 start main.py --name api_hp_test
+          fi
+
+      - name: Rollback Automático en caso de fallo
+        if: failure()
+        run: |
+          cd "/home/soporte/Escritorio/API TEST"
+          echo "Error detectado. Iniciando Rollback al commit $PREVIOUS_COMMIT..."
+          git reset --hard $PREVIOUS_COMMIT
+          source env/bin/activate
+          pip install -r requirements.txt
           pm2 restart api_hp_test
+
+      - name: Notificar Error por Correo
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.MAIL_SERVER }} # ej: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "❌ Fallo de Despliegue en QA - ${{ github.repository }}"
+          to: tu-correo@ejemplo.com
+          from: GitHub Actions QA
+          body: |
+            El despliegue en la rama QA ha fallado.
+            
+            Evento: ${{ github.event_name }}
+            Commit: ${{ github.sha }}
+            
+            Se ha ejecutado un rollback automático al último estado estable conocido. 
+            Por favor, revisa los logs en GitHub Actions.
