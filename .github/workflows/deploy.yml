@@ -25,7 +25,7 @@ jobs:
           git reset --hard origin/qa
           
           # 3. Actualizar entorno virtual
-          source env/bin/activate
+          source venv/bin/activate
           pip install -r requirements.txt
           
           # 4. Gestión inteligente de PM2
@@ -45,7 +45,7 @@ jobs:
           cd "/home/soporte/Escritorio/API TEST"
           echo "Error detectado. Iniciando Rollback al commit $PREVIOUS_COMMIT..."
           git reset --hard $PREVIOUS_COMMIT
-          source env/bin/activate
+          source venv/bin/activate
           pip install -r requirements.txt
           pm2 restart api_hp_test
 
