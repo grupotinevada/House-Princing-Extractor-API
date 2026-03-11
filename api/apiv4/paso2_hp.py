@@ -74,34 +74,6 @@ def parse_propiedades(html, cancel_event,fuente_actual):
 
             raw_name = card.get("data-name")                # Puede ser Calle o Link
             raw_display = card.get("data-display-name")     # El "Plan B" para la dirección
-            logger.debug(f"DEBUG ATRIBUTOS: {card.attrs}")
-            raw_fecha = card.get("data-date-trx")
-            logger.debug(f"   🧩 [BS4] Card parseada: {raw_name} - {raw_display} - {raw_fecha}")
-
-            raw_fecha_trx = card.get("data-date-trx")
-            raw_fecha_pub = card.get("data-date-pub") # Buscamos si existe un atributo específico para publicación
-
-            # Procesamos la fecha cruda que traiga
-            if raw_fecha_trx and "-" in raw_fecha_trx:
-                parts = raw_fecha_trx.split("-")
-                fecha_transaccion = f"{parts[2]}-{parts[1]}-{parts[0]}"
-            else:
-                fecha_transaccion = raw_fecha_trx or None
-
-            if raw_fecha_pub and "-" in raw_fecha_pub:
-                parts = raw_fecha_pub.split("-")
-                fecha_publicacion = f"{parts[2]}-{parts[1]}-{parts[0]}"
-            else:
-                fecha_publicacion = raw_fecha_pub or None
-
-            # LÓGICA DE FUENTE: Si es Oferta, la fecha principal es la de publicación
-            if fuente_actual == "Ofertas":
-                if not fecha_publicacion and fecha_transaccion:
-                    fecha_publicacion = fecha_transaccion
-                fecha_transaccion = None # Las ofertas no tienen fecha de transacción cerrada
-
-            logger.debug(f"   🧩 [BS4] Card parseada: {raw_name[:15]}... | TRX: {fecha_transaccion} | PUB: {fecha_publicacion}")
-            
             direccion_final, link_final = extraer_direccion_y_link(raw_name, raw_display)
 
             # 1. Extracción de Atributos Crudos
@@ -134,7 +106,6 @@ def parse_propiedades(html, cancel_event,fuente_actual):
                 "precio_uf": price_fmt,
                 "uf_m2": uf_m2_fmt,
                 "fecha_transaccion": fecha_transaccion,
-                "fecha_publicacion": fecha_publicacion,
                 "anio": anio,
                 "m2_util": m2_util or "0",
                 "m2_total": m2_total or "0",

@@ -24,24 +24,14 @@ logger = get_logger("paso4_hp", log_dir=os.path.join(PROJECT_ROOT, "logs"), log_
 # ==============================================================================
 
 def convertir_fecha_mysql(fecha_str: Any) -> Any:
-    """Convierte '18/05/2021' o '2021-05-18' a formato MySQL. Retorna None si está vacío."""
-    if not fecha_str or str(fecha_str).strip() in ["", "Sin fecha", "None"]:
+    """Convierte '18/05/2021' a '2021-05-18'. Retorna None si está vacío."""
+    if not fecha_str or str(fecha_str).strip() == "":
         return None
-    
-    fecha_limpia = str(fecha_str).strip()
-    
-    # Si ya viene en formato de MySQL (YYYY-MM-DD), se retorna directamente
-    if re.match(r'^\d{4}-\d{2}-\d{2}$', fecha_limpia):
-        return fecha_limpia
-        
-    # Si viene en formato chileno (DD/MM/YYYY o DD-MM-YYYY), la convertimos
-    for fmt in ("%d/%m/%Y", "%d-%m-%Y"):
-        try:
-            return datetime.strptime(fecha_limpia, fmt).strftime("%Y-%m-%d")
-        except ValueError:
-            pass # Pasa al siguiente formato si falla
-            
-    return None
+    try:
+        fecha_obj = datetime.strptime(str(fecha_str).strip(), "%d/%m/%Y")
+        return fecha_obj.strftime("%Y-%m-%d")
+    except ValueError:
+        return None
 
 def limpiar_precio_uf(valor: Any) -> float:
     """
@@ -233,6 +223,7 @@ def insertar_datos(lista_datos: List[Dict[str, Any]], cancel_event, callback_pro
             # --- 6. COMPARABLES ---
             hp_data = item.get("house_pricing", {})
             raw_comps = hp_data.get("comparables") 
+
             
             if raw_comps is None:
                 logger.warning(f"     ⚠️ [DEBUG] No existe la llave 'comparables' para la propiedad {uid}")
@@ -245,18 +236,13 @@ def insertar_datos(lista_datos: List[Dict[str, Any]], cancel_event, callback_pro
                     logger.info(f"     👀 [DEBUG] Se encontraron {len(raw_comps)} comparables. Insertando...")
                     
                     for i, comp in enumerate(raw_comps):
-
-                        logger.debug("REVISANDO FECHAS DE LOS COMPARABLES TRANSACCION Y PUBLICACION")
-                        logger.debug(f"     🔍 Fecha Publicación antes : {comp.get('fecha_publicacion')} | despues -> {convertir_fecha_mysql(comp.get('fecha_publicacion'))}")
-                        logger.debug(f"     🔍 Fecha Transacción antes : {comp.get('fecha_transaccion')} | despues -> {convertir_fecha_mysql(comp.get('fecha_transaccion'))}")
-                        
                         try:
                             sql_comp = """
                                 INSERT INTO comparables (
                                     propiedad_id, fuente, rol_comparable, direccion, comuna,
-                                    precio_uf, uf_m2, fecha_transaccion, fecha_publicacion, anio_construccion,
+                                    precio_uf, uf_m2, fecha_transaccion, anio_construccion,
                                     m2_util, m2_total, dormitorios, banios, distancia_metros, link_mapa, link_publicacion
-                                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                             """
                             vals_comp = (
                                 uid, 
@@ -267,7 +253,6 @@ def insertar_datos(lista_datos: List[Dict[str, Any]], cancel_event, callback_pro
                                 limpiar_precio_uf(comp.get("precio_uf")),
                                 limpiar_decimal_chile(comp.get("uf_m2")),
                                 convertir_fecha_mysql(comp.get("fecha_transaccion")),
-                                convertir_fecha_mysql(comp.get("fecha_publicacion")),
                                 comp.get("anio", 0),
                                 limpiar_decimal_chile(comp.get("m2_util")), 
                                 limpiar_decimal_chile(comp.get("m2_total")), 

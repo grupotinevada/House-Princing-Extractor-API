@@ -304,19 +304,8 @@ def main(cancel_event, ruta_lista=None, progress_callback=None):
                 logger.info(f"📂 Excel guardado en: {ruta_final_excel}")
             
             if os.path.exists(TEMP_JSON_FINAL):
-                import time
-                movido = False
-                for intento in range(5):
-                    try:
-                        shutil.move(TEMP_JSON_FINAL, ruta_final_json)
-                        logger.info(f"📂 JSON Raw guardado en: {ruta_final_json}")
-                        movido = True
-                        break
-                    except PermissionError:
-                        time.sleep(1)
-                
-                if not movido:
-                    raise Exception(f"El archivo {TEMP_JSON_FINAL} está bloqueado permanentemente por otro proceso de Windows.")
+                shutil.move(TEMP_JSON_FINAL, ruta_final_json)
+                logger.info(f"📂 JSON Raw guardado en: {ruta_final_json}")
 
             cleanup_temp_files(cancel_event)
 
