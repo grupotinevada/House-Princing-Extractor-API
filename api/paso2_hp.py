@@ -161,6 +161,8 @@ def extraer_direccion_y_link(raw_name, raw_display_name):
     if not raw_name:
         return "Sin dirección", None
 
+    
+
     raw_name_clean = raw_name.strip()
     
     if raw_name_clean.lower().startswith("http") or "www." in raw_name_clean.lower():
