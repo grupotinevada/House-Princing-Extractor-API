@@ -35,8 +35,7 @@ jobs:
             pm2 restart api_hp_test --update-env
           else
             echo "El proceso no existe. Iniciándolo por primera vez..."
-            # Ajusta 'main.py' al nombre de tu archivo de entrada
-            pm2 start main.py --name api_hp_test
+            pm2 start server.py --name api_hp_test
           fi
 
       - name: Rollback Automático en caso de fallo
