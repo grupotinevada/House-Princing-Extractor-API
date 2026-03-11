@@ -1,4 +1,4 @@
-name: Despliegue a QA
+name: Despliegue a QA (Self-Hosted)
 
 on:
   push:
@@ -8,26 +8,28 @@ on:
 jobs:
   deploy-qa:
     name: Desplegar en Servidor QA
-    runs-on: ubuntu-latest
+    # Cambiamos 'ubuntu-latest' por tu runner propio
+    runs-on: self-hosted 
 
     steps:
-      - name: Conectar por SSH y Ejecutar Comandos en QA
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          script: |
-            # 1. Moverse a la carpeta exacta en el servidor QA
-            cd "/home/soporte/Escritorio/API TEST"
-            
-            # 2. Asegurarse de estar en la rama correcta y descargar cambios
-            git checkout qa
-            git pull origin qa
-            
-            # 3. Activar entorno virtual e instalar dependencias
-            source env/bin/activate
-            pip install -r requirements.txt
-            
-            # 4. Reiniciar PM2
-            pm2 restart api_hp_test
+      # Este paso descarga el código en la carpeta de trabajo del runner
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Ejecutar comandos de despliegue local
+        run: |
+          # 1. Moverse a la carpeta del proyecto
+          # Nota: El runner ya está en el servidor, solo asegúrate de la ruta
+          cd "/home/soporte/Escritorio/API TEST"
+          
+          # 2. Actualizar código
+          git checkout qa
+          git pull origin qa
+          
+          # 3. Entorno virtual y dependencias
+          # Usamos la ruta completa del env para evitar errores de contexto
+          source env/bin/activate
+          pip install -r requirements.txt
+          
+          # 4. Reiniciar proceso
+          pm2 restart api_hp_test
