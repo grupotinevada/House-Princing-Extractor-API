@@ -58,7 +58,7 @@ jobs:
           username: ${{ secrets.MAIL_USERNAME }}
           password: ${{ secrets.MAIL_PASSWORD }}
           subject: "❌ Fallo de Despliegue en QA - ${{ github.repository }}"
-          to: tu-correo@ejemplo.com
+          to: isalazar@inevada.cl
           from: GitHub Actions QA
           body: |
             El despliegue en la rama QA ha fallado.
