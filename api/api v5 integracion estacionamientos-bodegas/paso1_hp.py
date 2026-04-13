@@ -155,134 +155,6 @@ def map_roles_to_links(pdf_obj) -> Dict[str, str]:
     logger.info(f"--- FIN MAPEO LINKS: {len(mapping)} roles mapeados ---")
     return mapping
 
-# --- EXTRACCIÓN ESPACIAL DE CONSTRUCCIONES ---
-def extraer_construcciones_espacial(pdf_obj) -> List[Dict[str, Any]]:
-    """
-    Extrae el 'Detalle Construcciones' usando coordenadas espaciales de palabras (pdfplumber).
-
-    El PDF genera celdas multi-línea (ej: material en 2 líneas, calidad en 2 líneas)
-    que no pueden capturarse con un regex de línea simple. Esta función:
-    1. Localiza el encabezado buscando la celda "N°" y calcula rangos X de columnas.
-    2. Agrupa las palabras de datos en bandas horizontales (líneas).
-    3. Detecta saltos verticales grandes entre bandas para separar registros.
-    4. Fusiona todas las bandas de cada bloque en un registro completo.
-    """
-    construcciones = []
-    Y_TOLERANCE   = 4    # puntos de tolerancia para agrupar palabras en la misma línea
-    FOOTER_MARGIN = 80   # ignorar pie de página (últimos N puntos de la página)
-    ROW_GAP       = 15   # brecha vertical mínima entre bandas para separar registros
-
-    for page in pdf_obj.pages:
-        page_height = page.height
-        words = page.extract_words(x_tolerance=3, y_tolerance=3, keep_blank_chars=False)
-        if not words:
-            continue
-
-        # 1. Localizar encabezado por la celda "N°"
-        header_words = [w for w in words if w['text'].strip() == "N°"]
-        if not header_words:
-            continue
-        header_y = header_words[0]['top']
-
-        # 2. Calcular rangos X de cada columna a partir del encabezado
-        header_row = sorted(
-            [w for w in words if abs(w['top'] - header_y) <= Y_TOLERANCE],
-            key=lambda w: w['x0']
-        )
-        col_ranges = []
-        for i, hw in enumerate(header_row):
-            x_end = header_row[i+1]['x0'] if i+1 < len(header_row) else float('inf')
-            col_ranges.append({'name': hw['text'], 'x0': hw['x0'], 'x1': x_end})
-
-        logger.debug(f"   🏗️ Columnas construcciones detectadas: {[c['name'] for c in col_ranges]}")
-
-        # 3. Palabras de datos: debajo del encabezado y por encima del pie de página
-        cutoff_y = page_height - FOOTER_MARGIN
-        data_words = [
-            w for w in words
-            if w['top'] > header_y + Y_TOLERANCE and w['top'] < cutoff_y
-        ]
-
-        # 4. Agrupar palabras en bandas horizontales (líneas)
-        bands = []
-        for w in sorted(data_words, key=lambda x: x['top']):
-            placed = False
-            for band in bands:
-                if abs(w['top'] - band['y']) <= Y_TOLERANCE:
-                    band['words'].append(w)
-                    placed = True
-                    break
-            if not placed:
-                bands.append({'y': w['top'], 'words': [w]})
-
-        def assign_cols(band):
-            row = {c['name']: [] for c in col_ranges}
-            for w in band['words']:
-                for col in col_ranges:
-                    if col['x0'] <= w['x0'] < col['x1']:
-                        row[col['name']].append(w['text'])
-                        break
-            return row
-
-        rows = [assign_cols(b) for b in bands]
-        if not rows:
-            continue
-
-        # 5. Agrupar bandas en bloques usando saltos verticales grandes
-        #    Cada bloque corresponde a un registro de construcción
-        blocks = []
-        current_block = [rows[0]]
-        for j in range(1, len(rows)):
-            gap = bands[j]['y'] - bands[j-1]['y']
-            if gap > ROW_GAP:
-                blocks.append(current_block)
-                current_block = [rows[j]]
-            else:
-                current_block.append(rows[j])
-        blocks.append(current_block)
-
-        # 6. Procesar cada bloque como un registro
-        for block in blocks:
-            # Solo procesar bloques que contengan un N° numérico válido
-            has_nro = any(
-                ' '.join(r.get('N°', [])).strip().isdigit()
-                for r in block
-            )
-            if not has_nro:
-                continue
-
-            # Fusionar todas las palabras del bloque por columna
-            merged = {c['name']: [] for c in col_ranges}
-            for row in block:
-                for col in col_ranges:
-                    merged[col['name']].extend(row[col['name']])
-
-            def dedup_ordered(text):
-                """Elimina duplicados manteniendo orden (para casos como 'Media inferior Media inferior')."""
-                ws = text.split()
-                seen, out = set(), []
-                for w in ws:
-                    if w.lower() not in seen:
-                        seen.add(w.lower())
-                        out.append(w)
-                return ' '.join(out)
-
-            obj = {
-                "nro":       ' '.join(merged.get('N°', [])).strip(),
-                "material":  ' '.join(merged.get('Material', [])).strip(),
-                "calidad":   dedup_ordered(' '.join(merged.get('Calidad', []))),
-                "condicion": ' '.join(merged.get('Condición', [])).strip(),
-                "anio":      ' '.join(merged.get('Año', [])).strip(),
-                "m2":        clean_float(' '.join(merged.get('M²', []))),
-                "destino":   ' '.join(merged.get('Destino', [])).strip(),
-            }
-            construcciones.append(obj)
-            logger.debug(f"   🏗️ Construcción detectada: N°{obj['nro']} {obj['material']} {obj['m2']}m2 ({obj['anio']})")
-
-    logger.info(f"   🏗️ Total construcciones extraídas: {len(construcciones)}")
-    return construcciones
-
-
 # --- LÓGICA DE EXTRACCIÓN PRINCIPAL ---
 def parse_house_pricing_text(full_text: str, link_map: Dict[str, str] = {}) -> Dict[str, Any]:
     logger.debug("🧠 Iniciando parseo de texto plano...")
@@ -381,7 +253,23 @@ def parse_house_pricing_text(full_text: str, link_map: Dict[str, str] = {}) -> D
                     })
                 logger.info(f"   📚 Roles CBR extraídos: {len(data['roles_cbr'])}")
 
-        pass  # Construcciones se extraen espacialmente en extraer_construcciones_espacial()
+        # Construcciones
+        match_cons = re.search(r'^(\d+)\s+(.+?)\s+(20\d{2})\s+([\d,.]+)\s+(.+)$', line.strip())
+        if match_cons:
+            try:
+                const_obj = {
+                    "nro": match_cons.group(1),
+                    "material": match_cons.group(2).strip(), 
+                    "calidad": "", 
+                    "anio": match_cons.group(3),
+                    "m2": clean_float(match_cons.group(4)),
+                    "destino": match_cons.group(5).strip()
+                }
+                data["construcciones"].append(const_obj)
+                # logger.debug(f"   🏗️ Construcción detectada: {const_obj['anio']} - {const_obj['m2']}m2")
+            except Exception as e:
+                logger.warning(f"⚠️ Error parseando línea construcción '{line.strip()}': {e}")
+                pass 
 
     # --- 2. Regex Globales ---
 
@@ -476,18 +364,12 @@ def parse_house_pricing_text(full_text: str, link_map: Dict[str, str] = {}) -> D
     
     for key, pat in patterns_cbr.items():
         match = re.search(pat, full_text)
-        if match:
-            val = match.group(1).strip()
-            if key == "Año":
-                # Limpieza específica para año S/I
-                dato_limpio = limpiar_dato_si(val)
-                # Si limpiar_dato_si nos devuelve None (porque decía "S/I" o estaba vacío), aplicamos la nueva regla
-                data["informacion_cbr"][key] = dato_limpio if dato_limpio is not None else "Sin datos desde hp"
-            else:
-                data["informacion_cbr"][key] = val  
+        val = match.group(1).strip()
+        if key == "Año":
+            # Limpieza específica para año S/I
+            data["informacion_cbr"][key] = limpiar_dato_si(val)
         else:
-            # Si la sección entera no existe en el PDF (como en San Fernando), ponemos la etiqueta
-            data["informacion_cbr"][key] = "Sin datos desde hp"
+            data["informacion_cbr"][key] = val  
 
     return data
 
@@ -529,21 +411,12 @@ def procesar_lote_pdfs(carpeta_entrada: str, cancel_event, callback_progreso=Non
                 link_mapping = map_roles_to_links(pdf)
                 
                 # 2. Extracción de Texto Completo
-                construcciones_espaciales = []
                 for p_idx, page in enumerate(pdf.pages):
                     text = page.extract_text(layout=True)
                     if text: full_text += text + "\n"
 
-                # Extracción espacial de construcciones (más robusta que regex de línea)
-                construcciones_espaciales = extraer_construcciones_espacial(pdf)
-
             # 3. Parsing
             datos_extraidos = parse_house_pricing_text(full_text, link_map=link_mapping)
-
-            # Inyectar construcciones espaciales (sobreescribe resultado de regex si hay datos)
-            if construcciones_espaciales:
-                datos_extraidos["construcciones"] = construcciones_espaciales
-                logger.info(f"   ✅ Construcciones por extracción espacial: {len(construcciones_espaciales)} registros.")
 
             # --- LECTURA DE METADATA (TASACIONES) ---
             link_informe_recuperado = None

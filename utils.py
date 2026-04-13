@@ -276,6 +276,7 @@ COMUNAS_TRADUCTOR = {
     "chillan viejo": "Chillán Viejo",
     "bulnes": "Bulnes",
     "cobquecura": "Cobquecura",
+    "huechuraba": "Huechuraba",
     "coelemu": "Coelemu",
     "coihueco": "Coihueco",
     "el carmen": "El Carmen",
