@@ -215,8 +215,6 @@ def generar_excel(lista_datos, cancel_event, nombre_archivo="reporte_final.xlsx"
                     "M2 Total": comp.get("m2_total"),
                     "Dormitorios": comp.get("dormitorios"),
                     "Baños": comp.get("banios"),
-                    "Estacionamientos": comp.get("estacionamientos"),
-                    "Bodegas": comp.get("bodegas"),
                     "Distancia (mts)": comp.get("distancia_metros"),
                     "Link Mapa": comp.get("link_maps", ""),
                     "Link Publicacion": comp.get("link_publicacion", "")

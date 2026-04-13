@@ -83,18 +83,6 @@ def limpiar_int(valor: Any) -> int:
     except:
         return 0
 
-
-def limpiar_anio_mysql(valor: Any) -> Any:
-    """Convierte a entero para BD. Si viene la etiqueta de error o vacío, retorna None (NULL)."""
-    if not valor or str(valor).strip() == "Sin datos desde hp" or str(valor).strip() == "None":
-        return None
-    try:
-        # Extrae solo los números por si viene algo como "2021." o espacios
-        s = re.sub(r'[^\d]', '', str(valor))
-        return int(s) if s else None
-    except:
-        return None
-
 # ==============================================================================
 #  LÓGICA PRINCIPAL
 # ==============================================================================
@@ -176,7 +164,7 @@ def insertar_datos(lista_datos: List[Dict[str, Any]], cancel_event, callback_pro
                 limpiar_decimal_chile(carac.get("M2 Terreno")),
                 avaluo.get("Avalúo Total"), avaluo.get("Avalúo Exento"), 
                 avaluo.get("Avalúo Afecto"), avaluo.get("Contribuciones Semestrales"),
-                cbr.get("Foja"), cbr.get("Número"), limpiar_anio_mysql(cbr.get("Año")),
+                cbr.get("Foja"), cbr.get("Número"), cbr.get("Año"), 
                 fecha_tx_clean,
                 monto_tx_clean, 
                 vend_str, comp_str, meta.get("nombre"),
@@ -267,8 +255,8 @@ def insertar_datos(lista_datos: List[Dict[str, Any]], cancel_event, callback_pro
                                 INSERT INTO comparables (
                                     propiedad_id, fuente, rol_comparable, direccion, comuna,
                                     precio_uf, uf_m2, fecha_transaccion, fecha_publicacion, anio_construccion,
-                                    m2_util, m2_total, dormitorios, banios, estacionamientos, bodegas, distancia_metros, link_mapa, link_publicacion
-                                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                    m2_util, m2_total, dormitorios, banios, distancia_metros, link_mapa, link_publicacion
+                                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                             """
                             vals_comp = (
                                 uid, 
@@ -285,8 +273,6 @@ def insertar_datos(lista_datos: List[Dict[str, Any]], cancel_event, callback_pro
                                 limpiar_decimal_chile(comp.get("m2_total")), 
                                 limpiar_int(comp.get("dormitorios")), 
                                 limpiar_int(comp.get("banios")),
-                                limpiar_int(comp.get("estacionamientos", 0)),
-                                limpiar_int(comp.get("bodegas", 0)),
                                 comp.get("distancia_metros", 0),
                                 comp.get("link_maps", ""), 
                                 comp.get("link_publicacion", "")

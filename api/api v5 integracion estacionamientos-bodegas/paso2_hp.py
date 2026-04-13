@@ -112,7 +112,6 @@ def parse_propiedades(html, cancel_event,fuente_actual):
             rol = card.get("data-rol")
             comuna = card.get("data-comuna")
             fecha_transaccion = card.get("data-date-trx")
-            hash_id = card.get("data-hash")
             # 2. Limpieza de datos numéricos
             m2_util = card.get("data-m2-formatted")
             m2_total = card.get("data-m2-total-formatted")
@@ -137,7 +136,6 @@ def parse_propiedades(html, cancel_event,fuente_actual):
                 "fecha_transaccion": fecha_transaccion,
                 "fecha_publicacion": fecha_publicacion,
                 "anio": anio,
-                "hash_id": hash_id,
                 "m2_util": m2_util or "0",
                 "m2_total": m2_total or "0",
                 "dormitorios": dormitorios,
@@ -222,8 +220,7 @@ def aplicar_filtro_ofertas_publicadas(driver, wait):
 
 def _buscar_propiedad_individual(driver, wait, comuna_nombre, tipo_target, rol_target, cancel_event):
     from selenium.common.exceptions import TimeoutException
-    import re
-
+    
     logger.info(f"🔎 Buscando: {comuna_nombre} | Rol: {rol_target} | Tipo: {tipo_target}")
     
     datos_retorno = {
@@ -265,8 +262,7 @@ def _buscar_propiedad_individual(driver, wait, comuna_nombre, tipo_target, rol_t
         
         # Esperamos a que la página esté "tranquila" antes de buscar
         wait.until(lambda d: d.execute_script("return document.readyState === 'complete'"))
-        time.sleep(5)
-        logger.debug("   ⏳ Esperando 5 segundos la recarga de filtro...")
+
         
         # 1. Capturar contenedor viejo
         lista_vieja = None
@@ -399,60 +395,6 @@ def _buscar_propiedad_individual(driver, wait, comuna_nombre, tipo_target, rol_t
                     
                     # 5. Cortar las mejores 10 (Garantiza 10 propiedades SÍ O SÍ con link, si hay disponibles)
                     mejores_10 = propiedades_raw[:10]
-
-                    # 6. Consultar detalles (Est/Bod) para las mejores 10 propiedades
-                    try:
-                        csrf_token = driver.find_element(By.NAME, "csrfmiddlewaretoken").get_attribute("value")
-                        search_buc = driver.find_element(By.NAME, "buc").get_attribute("value")
-                        
-                        logger.debug(f"     🕵️‍♂️ Consultando detalles (Est/Bod) para {len(mejores_10)} propiedades vía fetch...")
-                        
-                        for p in mejores_10:
-                            if not p.get("hash_id"):
-                                p["estacionamientos"] = 0
-                                p["bodegas"] = 0
-                                continue
-                                
-                            html_pdp = driver.execute_async_script("""
-                                var done = arguments[arguments.length - 1];
-                                var formData = new FormData();
-                                formData.append('csrfmiddlewaretoken', arguments[0]);
-                                formData.append('search_buc', arguments[1]);
-                                formData.append('fuente', arguments[2]);
-                                formData.append('num', '50');
-                                formData.append('num_total', '300');
-                                formData.append('num_des', '0');
-                                formData.append('map_property_id', arguments[3]);
-
-                                fetch('/buscar-propiedades/mapa-rol-pdp/', {
-                                    method: 'POST',
-                                    body: formData,
-                                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                                })
-                                .then(r => r.text())
-                                .then(text => done(text))
-                                .catch(err => done(""));
-                            """, csrf_token, search_buc, fuente_val, p["hash_id"])
-                            
-                            p["estacionamientos"] = 0
-                            p["bodegas"] = 0
-                            
-                            if html_pdp:
-                                soup_pdp = BeautifulSoup(html_pdp, "html.parser")
-                                
-                                span_est = soup_pdp.find("span", string="Estacionamientos")
-                                if span_est:
-                                    val_est = span_est.find_next_sibling("span").text.strip()
-                                    match = re.search(r'\d+', val_est)
-                                    if match: p["estacionamientos"] = int(match.group())
-                                        
-                                span_bod = soup_pdp.find("span", string="Bodegas")
-                                if span_bod:
-                                    val_bod = span_bod.find_next_sibling("span").text.strip()
-                                    match = re.search(r'\d+', val_bod)
-                                    if match: p["bodegas"] = int(match.group())
-                    except Exception as e:
-                        logger.warning(f"     ⚠️ Error extrayendo detalles adicionales (Est/Bod): {e}")
                     lista_total.extend(mejores_10)
                     
                     logger.success(f"     📥 Se agregaron {len(mejores_10)} propiedades válidas (Top 10 más cercanas) de {fuente_val}")
