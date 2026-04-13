@@ -227,7 +227,7 @@ def main(cancel_event, ruta_lista=None, progress_callback=None):
         json_limpio.append(prop)
         
     if not json_limpio:
-        mensaje_error = "❌ Ninguna propiedad del lote superó la Aduana de Datos"
+        mensaje_error = f"❌ Ninguna propiedad del lote superó la Aduana de Datos. motivo: {motivo}"
         logger.error(mensaje_error)
         raise Exception(mensaje_error)
     

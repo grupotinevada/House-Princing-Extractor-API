@@ -156,7 +156,7 @@ def ejecutar_proceso_background(task_id: str, file_path: str, cancel_event: thre
                     f"CPU: {datos.get('cpu_proceso_percent')}% | "
                     f"Chrome Zombies: {datos.get('workers_chrome_activos')}"
                 )
-            time.sleep(2)
+            time.sleep(15)
 
     # Definimos el callback que main_hp llamará para reportar progreso
     def progress_callback_api(porcentaje, mensaje, errores_nuevos=None):
