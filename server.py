@@ -37,12 +37,27 @@ class PropiedadRequest(BaseModel):
     @field_validator('rol')
     @classmethod
     def limpiar_y_validar_rol(cls, v: str) -> str:
-        # 1. Limpieza tolerante: Quitar la palabra "rol", espacios y pasar a mayúsculas
-        v_limpio = v.lower().replace("rol", "").replace(" ", "").strip().upper()
+        # 1. Limpieza inicial: Quitar palabra "rol", espacios y normalizar guiones
+        # Reemplaza guion largo (—) y en-dash (–) por guion normal (-)
+        v_limpio = v.lower().replace("rol", "").replace(" ", "").strip()
+        v_limpio = v_limpio.replace("—", "-").replace("–", "-")
         
-        # 2. Validación estricta: Debe ser números, un guion, y números o la letra K
+        # 2. Manejo de ceros a la izquierda y formato
+        if '-' in v_limpio:
+            partes = v_limpio.split('-')
+            if len(partes) == 2:
+                manzana = partes[0].lstrip('0')
+                predio = partes[1].lstrip('0')
+                
+                # Si al quitar ceros queda vacío (era "000"), dejamos un "0"
+                manzana = manzana if manzana else "0"
+                predio = predio if predio else "0"
+                
+                v_limpio = f"{manzana}-{predio.upper()}"
+
+        # 3. Validación final: Debe ser números, un guion, y números o la letra K
         if not re.match(r'^\d+-[\dK]+$', v_limpio):
-            raise ValueError(f"Formato de Rol inválido ('{v}'). Debe ser 'Manzana-Predio' (ej: 1234-56).")
+            raise ValueError(f"Formato de Rol inválido ('{v}'). Se intentó reparar como '{v_limpio}'. Debe ser 'Manzana-Predio'.")
         
         return v_limpio
 
