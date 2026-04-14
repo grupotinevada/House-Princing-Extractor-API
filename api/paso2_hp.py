@@ -590,7 +590,7 @@ def procesar_lote_worker(id_worker, sublista_propiedades, cancel_event, callback
                             pass
                     else:
                         logger.error(f"💀 [Worker-{id_worker}] Fallo definitivo para {rol} tras {MAX_INTENTOS} intentos. Motivo final: {e}")
-                        resultado_hp["mensaje"] = f"Error Técnico Persistente: {str(e)}"
+                        resultado_hp["mensaje"] = f"Cantidad de reintentos alcanzado, problemas en la busqueda de los comparables (Timeout o error de conexion) {str(e)}"
                         exito_rol = False
             if not exito_rol:
                 # Inyectamos esta bandera para que main_hp.py la intercepte y lo saque de la BD

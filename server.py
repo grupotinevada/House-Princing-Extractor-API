@@ -16,7 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 import mysql.connector
 from dotenv import load_dotenv
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, Field
 import time
 import utils
 import re
@@ -37,12 +37,27 @@ class PropiedadRequest(BaseModel):
     @field_validator('rol')
     @classmethod
     def limpiar_y_validar_rol(cls, v: str) -> str:
-        # 1. Limpieza tolerante: Quitar la palabra "rol", espacios y pasar a mayúsculas
-        v_limpio = v.lower().replace("rol", "").replace(" ", "").strip().upper()
+        # 1. Limpieza inicial: Quitar palabra "rol", espacios y normalizar guiones
+        # Reemplaza guion largo (—) y en-dash (–) por guion normal (-)
+        v_limpio = v.lower().replace("rol", "").replace(" ", "").strip()
+        v_limpio = v_limpio.replace("—", "-").replace("–", "-")
         
-        # 2. Validación estricta: Debe ser números, un guion, y números o la letra K
+        # 2. Manejo de ceros a la izquierda y formato
+        if '-' in v_limpio:
+            partes = v_limpio.split('-')
+            if len(partes) == 2:
+                manzana = partes[0].lstrip('0')
+                predio = partes[1].lstrip('0')
+                
+                # Si al quitar ceros queda vacío (era "000"), dejamos un "0"
+                manzana = manzana if manzana else "0"
+                predio = predio if predio else "0"
+                
+                v_limpio = f"{manzana}-{predio.upper()}"
+
+        # 3. Validación final: Debe ser números, un guion, y números o la letra K
         if not re.match(r'^\d+-[\dK]+$', v_limpio):
-            raise ValueError(f"Formato de Rol inválido ('{v}'). Debe ser 'Manzana-Predio' (ej: 1234-56).")
+            raise ValueError(f"Formato de Rol inválido ('{v}'). Se intentó reparar como '{v_limpio}'. Debe ser 'Manzana-Predio'.")
         
         return v_limpio
 
@@ -156,7 +171,7 @@ def ejecutar_proceso_background(task_id: str, file_path: str, cancel_event: thre
                     f"CPU: {datos.get('cpu_proceso_percent')}% | "
                     f"Chrome Zombies: {datos.get('workers_chrome_activos')}"
                 )
-            time.sleep(2)
+            time.sleep(15)
 
     # Definimos el callback que main_hp llamará para reportar progreso
     def progress_callback_api(porcentaje, mensaje, errores_nuevos=None):
@@ -280,12 +295,27 @@ def startup_event():
     conn.close()
     logger.info("✅ Validaciones de inicio exitosas. API lista.")
     
-@app.get("/health")
+@app.get(
+    "/health",
+    tags=["Sistema"],
+    summary="Verificar estado de la API",
+    description="Endpoint ligero para comprobar si la API está viva y respondiendo correctamente.",
+    response_description="Retorna el estado de conexión actual y el sistema operativo."
+)
 def health_check():
     """Endpoint para verificar que la API está viva"""
     return {"status": "online", "system": sys.platform}
 
-@app.post("/upload-process")
+@app.post(
+    "/upload-process",
+    tags=["Procesamiento"],
+    summary="Subir archivo y procesar",
+    description="""
+    Recibe un archivo Excel (.xlsx, .xls) o CSV (.csv), lo guarda temporalmente en el servidor, 
+    genera un ID de tarea único (`task_id`) y lanza el procesamiento de propiedades en un hilo en segundo plano (background task).
+    """,
+    response_description="Retorna el ID único de la tarea generada y el estado inicial de la cola."
+)
 async def upload_and_process(file: UploadFile = File(...), background_tasks: BackgroundTasks = None):
     """
     Recibe el archivo Excel/CSV, genera un ID y lanza el proceso en background.
@@ -327,7 +357,16 @@ async def upload_and_process(file: UploadFile = File(...), background_tasks: Bac
         "message": "Archivo recibido. Proceso iniciado."
     }
 
-@app.post("/process-json")
+@app.post(
+    "/process-json",
+    tags=["Procesamiento"],
+    summary="Procesar propiedades vía JSON",
+    description="""
+    Recibe un listado de propiedades directamente en formato JSON, validando la estructura mediante Pydantic. 
+    Convierte internamente los datos a un archivo temporal y lanza el procesamiento en segundo plano.
+    """,
+    response_description="Retorna el ID único de la tarea y confirma el inicio del proceso."
+)
 async def process_json_data(
     data: List[PropiedadRequest], 
     background_tasks: BackgroundTasks
@@ -372,26 +411,79 @@ async def process_json_data(
         "status": "queued", 
         "message": "Datos recibidos correctamente. Proceso iniciado."
     }
+from typing import Dict, List, Any
+from fastapi import HTTPException, Path
+from pydantic import BaseModel, Field
 
-@app.get("/status/{task_id}")
-def get_status(task_id: str):
-    """
-    Retorna el estado actual del proceso (Polling).
-    """
-    task = tasks.get(task_id)
-    if not task:
-        raise HTTPException(status_code=404, detail="Tarea no encontrada")
-    
-    return {
-        "task_id": task_id,
-        "status": task["status"],
-        "progress": task["progress"],
-        "message": task.get("message", ""),
-        "system_stats": task.get("stats", {}),
-        "errores_parciales": task.get("errores_parciales", [])
+# Simulación del storage global
+tasks: Dict[str, Dict[str, Any]] = {}
+
+
+class StatusResponse(BaseModel):
+    task_id: str = Field(..., description="Identificador único universal (UUID) de la tarea.")
+    status: str = Field(
+        ..., 
+        description="Estado actual: 'queued', 'processing', 'completed', 'error', 'cancelling' o 'cancelled'."
+    )
+    progress: float = Field(
+        ..., 
+        ge=0, 
+        le=100, 
+        description="Porcentaje de avance del proceso (0.0 a 100.0)."
+    )
+    message: str = Field(
+        ..., 
+        description="Mensaje informativo sobre la etapa actual del procesamiento."
+    )
+    system_stats: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Métricas de hardware: uso de RAM, CPU y cantidad de navegadores activos."
+    )
+    errores_parciales: List[str] = Field(
+        default_factory=list,
+        description="Lista de advertencias o fallos no críticos encontrados durante la ejecución."
+    )
+
+
+@app.get(
+    "/status/{task_id}",
+    tags=["Monitoreo"],
+    summary="Consultar estado y métricas de la tarea",
+    response_model=StatusResponse,
+    responses={
+        200: {"description": "Estado obtenido correctamente."},
+        404: {"description": "La tarea especificada no existe en la memoria volátil del servidor."}
     }
+)
+def get_status(
+    task_id: str = Path(
+        ..., 
+        description="El UUID retornado al iniciar el proceso", 
+        example="550e8400-e29b-41d4-a716-446655440000"
+    )
+):
+    task = tasks.get(task_id)
 
-@app.get("/download/{task_id}")
+    if task is None:
+        raise HTTPException(status_code=404, detail="Tarea no encontrada o ID inválido")
+
+    return StatusResponse(
+        task_id=task_id,
+        status=task.get("status", "unknown"),
+        progress=task.get("progress", 0.0),
+        message=task.get("message", ""),
+        system_stats=task.get("stats", {}),
+        errores_parciales=task.get("errores_parciales", [])
+    )
+
+@app.get(
+    "/download/{task_id}",
+    tags=["Descargas"],
+    summary="Descargar Excel de resultados",
+    description="Si el proceso asociado al `task_id` ha finalizado exitosamente (`status == 'completed'`), permite descargar el archivo físico con los resultados extraídos.",
+    response_class=FileResponse,
+    response_description="Descarga de archivo tipo application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+)
 def download_result(task_id: str):
     """
     Descarga el Excel resultante si el proceso terminó.
@@ -413,7 +505,13 @@ def download_result(task_id: str):
         media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
 
-@app.post("/cancel/{task_id}")
+@app.post(
+    "/cancel/{task_id}",
+    tags=["Procesamiento"],
+    summary="Cancelar una tarea en curso",
+    description="Activa el evento de detención seguro (`threading.Event`) que cierra navegadores Zombies, finaliza el script asíncrono y libera recursos antes de que termine su ciclo natural.",
+    response_description="Confirmación de la ejecución de la señal de cancelación."
+)
 def cancel_process(task_id: str):
     """
     Envía señal de parada al proceso.
@@ -437,7 +535,13 @@ def cancel_process(task_id: str):
     return {"message": f"El proceso no se puede cancelar (Estado actual: {status})."}
 
 
-@app.get("/api/datos/{nombre_tabla}")
+@app.get(
+    "/api/datos/{nombre_tabla}",
+    tags=["Datos e Información"],
+    summary="Consultar últimos registros de DB",
+    description="Extrae y retorna los últimos 100 registros directamente desde la base de datos MySQL. Se aplica una lista blanca de tablas para evitar inyecciones SQL.",
+    response_description="Lista de diccionarios representando los últimos 100 registros extraídos de la tabla seleccionada."
+)
 def obtener_datos_tabla(nombre_tabla: str):
     """
     Retorna los últimos 100 registros de cualquier tabla permitida.
