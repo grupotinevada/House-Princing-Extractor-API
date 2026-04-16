@@ -117,7 +117,9 @@ def insertar_datos(lista_datos: List[Dict[str, Any]], cancel_event, callback_pro
     logger.info("💾 PASO 4: Iniciando inyección a Base de Datos...")
     
     conn = get_db_connection()
-    if not conn: return False
+    # --- NUEVA SEMÁNTICA: Validación de Conexión Inicial ---
+    if not conn: 
+        raise Exception("Fallo Crítico: No se pudo establecer conexión con la Base de Datos. Verifique las credenciales o el estado del servidor MySQL.")
 
     cursor = conn.cursor()
     total = len(lista_datos)
@@ -183,7 +185,7 @@ def insertar_datos(lista_datos: List[Dict[str, Any]], cancel_event, callback_pro
                 meta.get("link_informe"), 
 
                 item.get("tasa_vta_clp", 0),
-                limpiar_precio_uf(item.get("tasa_vta_uf", "0")), # Limpia el punto de miles (4.638 -> 4638.0)
+                limpiar_precio_uf(item.get("tasa_vta_uf", "0")), 
                 item.get("tasa_arr_clp", 0),
                 limpiar_precio_uf(item.get("tasa_arr_uf", "0"))
             )
@@ -257,7 +259,6 @@ def insertar_datos(lista_datos: List[Dict[str, Any]], cancel_event, callback_pro
                     logger.info(f"     👀 [DEBUG] Se encontraron {len(raw_comps)} comparables. Insertando...")
                     
                     for i, comp in enumerate(raw_comps):
-
                         logger.debug("REVISANDO FECHAS DE LOS COMPARABLES TRANSACCION Y PUBLICACION")
                         logger.debug(f"     🔍 Fecha Publicación antes : {comp.get('fecha_publicacion')} | despues -> {convertir_fecha_mysql(comp.get('fecha_publicacion'))}")
                         logger.debug(f"     🔍 Fecha Transacción antes : {comp.get('fecha_transaccion')} | despues -> {convertir_fecha_mysql(comp.get('fecha_transaccion'))}")
@@ -304,15 +305,30 @@ def insertar_datos(lista_datos: List[Dict[str, Any]], cancel_event, callback_pro
         logger.success(f"✅ Inyección completada: {total} propiedades guardadas en BD.")
         return True
 
+    # --- NUEVA SEMÁNTICA: Control explícito de Errores MySQL ---
     except Error as e:
         logger.error(f"❌ Error en transacción BD: {e}")
         if conn: conn.rollback()
-        return False
+        
+        # Mapeo de códigos de error de MySQL (errno) a mensajes amigables
+        err_code = e.errno if hasattr(e, 'errno') else 0
+        if err_code in (1046, 1049, 2003, 2005):
+            mensaje_bd = "No se pudo contactar al servidor o base de datos MySQL (Revise las variables de entorno de conexión)."
+        elif err_code in (1406, 1264, 1366, 1292):
+            mensaje_bd = "Error de formato de datos: Una de las propiedades extraídas superó el límite de caracteres o no coincide con el tipo de dato de la base de datos."
+        elif err_code == 1062:
+            mensaje_bd = "Error de duplicidad: El registro o rol que intenta insertar ya existe en la base de datos."
+        elif err_code in (2006, 2013):
+            mensaje_bd = "Se perdió la conexión con la base de datos de forma inesperada mientras se inyectaban los datos."
+        else:
+            mensaje_bd = f"Fallo en la base de datos durante el guardado. La inyección fue cancelada. Detalle técnico: {e.msg if hasattr(e, 'msg') else str(e)}"
+            
+        raise Exception(mensaje_bd)
         
     except Exception as ex:
         logger.error(f"❌ Error general en Paso 4: {ex}")
         if conn: conn.rollback()
-        return False
+        raise Exception(f"Error estructural procesando los datos para la inyección. Detalle técnico: {str(ex)}")
 
     finally:
         if conn and conn.is_connected():

@@ -11,6 +11,7 @@ from logger import get_logger
 logger = get_logger("paso3_excel", log_dir="logs", log_file="paso3_excel.log")
 
 # Modificación en la definición: Agregamos crear_excel=True
+# Modificación en la definición: Agregamos crear_excel=True
 def generar_excel(lista_datos, cancel_event, nombre_archivo="reporte_final.xlsx", callback_progreso=None, crear_excel=False ):
     """
     Genera un Excel Relacional con 5 pestañas.
@@ -137,10 +138,8 @@ def generar_excel(lista_datos, cancel_event, nombre_archivo="reporte_final.xlsx"
             })
 
         # --- PREPARACIÓN: MAPEO DE DEUDAS ---
-        # Creamos un diccionario { "ROL NORMALIZADO": {objeto_deuda} } para cruzar fácil
         mapa_deudas = {}
         for d in item.get("deudas", []):
-            # Normalizamos a mayúsculas y quitamos espacios (ej: "ROL 123" == "Rol 123")
             key_d = str(d.get("rol", "")).upper().strip()
             mapa_deudas[key_d] = d
 
@@ -150,11 +149,9 @@ def generar_excel(lista_datos, cancel_event, nombre_archivo="reporte_final.xlsx"
              logger.debug(f"     📚 Agregando {len(roles_cbr)} roles asociados CBR.")
         
         for r_cbr in roles_cbr:
-            # Obtenemos el rol asociado (Ej: "ROL 9064-927")
             rol_asoc_raw = r_cbr.get("rol", "")
             rol_asoc_key = str(rol_asoc_raw).upper().strip()
             
-            # Buscamos si tiene deuda en el mapa
             deuda_obj = mapa_deudas.get(rol_asoc_key, {})
             monto_asoc = deuda_obj.get("monto", 0)
             link_asoc = deuda_obj.get("link_tgr", "No detectado")
@@ -165,8 +162,8 @@ def generar_excel(lista_datos, cancel_event, nombre_archivo="reporte_final.xlsx"
                 "Rol Propiedad": info_gral.get("rol"),
                 "Rol Asociado": rol_asoc_raw,
                 "Tipo / Ubicación": r_cbr.get("tipo"),
-                "Monto Deuda": monto_asoc,  # 
-                "Link Deuda TGR": link_asoc # 
+                "Monto Deuda": monto_asoc,  
+                "Link Deuda TGR": link_asoc 
             })
         
         # --- 4. HOJA DEUDAS TGR (MODIFICADO: FILTRO SOLO ROL PRINCIPAL) ---
@@ -177,9 +174,6 @@ def generar_excel(lista_datos, cancel_event, nombre_archivo="reporte_final.xlsx"
         for deuda in deudas_list:
             rol_deuda_str = str(deuda.get("rol", ""))
             
-            # LOGICA DE FILTRO: Solo agregamos si el Rol Principal (ej: 9064-112)
-            # está contenido en el texto del Rol Deuda (ej: Rol 9064-112).
-            # Esto elimina los roles asociados de esta hoja.
             if str(rol_principal) in rol_deuda_str:
                 
                 link = deuda.get("link_tgr", "")
@@ -281,9 +275,17 @@ def generar_excel(lista_datos, cancel_event, nombre_archivo="reporte_final.xlsx"
         
         return True
 
+    # --- NUEVA SEMÁNTICA: Atrapar errores específicos de escritura en disco ---
+    except PermissionError as e:
+        mensaje_accionable = "No se pudo generar el reporte. El archivo Excel destino está abierto o bloqueado por otro programa. Ciérrelo e intente nuevamente."
+        logger.error(f"❌ Error de permisos en disco: {mensaje_accionable}")
+        # En vez de devolver False en silencio, lanzamos el error para que la API lo atrape
+        raise Exception(mensaje_accionable)
+        
     except Exception as e:
-        logger.error(f"❌ Error FATAL al guardar Excel completo: {e}", exc_info=True)
-        return False
+        mensaje_accionable = f"Error estructural al crear el archivo Excel. Es posible que los datos extraídos contengan caracteres inválidos. Detalle técnico: {str(e)}"
+        logger.error(f"❌ Error FATAL al guardar Excel completo: {mensaje_accionable}", exc_info=True)
+        raise Exception(mensaje_accionable)
 
 def _ajustar_columnas(writer, sheet_name, df, cancel_event):
     """Función auxiliar para auto-ajustar el ancho de columnas (Soporte > 26 cols)"""

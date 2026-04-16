@@ -8,7 +8,7 @@ on:
 jobs:
   deploy:
     name: Desplegar y Monitorear
-    runs-on: self-hosted
+    runs-on: qa
 
     steps:
       - name: Actualizar y Reiniciar
