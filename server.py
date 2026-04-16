@@ -418,6 +418,10 @@ from pydantic import BaseModel, Field
 # Simulación del storage global
 tasks: Dict[str, Dict[str, Any]] = {}
 
+class ErrorDetalle(BaseModel):
+    rol: str
+    paso: str
+    motivo: str
 
 class StatusResponse(BaseModel):
     task_id: str = Field(..., description="Identificador único universal (UUID) de la tarea.")
@@ -439,7 +443,7 @@ class StatusResponse(BaseModel):
         default_factory=dict,
         description="Métricas de hardware: uso de RAM, CPU y cantidad de navegadores activos."
     )
-    errores_parciales: List[str] = Field(
+    errores_parciales: List[ErrorDetalle] = Field(
         default_factory=list,
         description="Lista de advertencias o fallos no críticos encontrados durante la ejecución."
     )

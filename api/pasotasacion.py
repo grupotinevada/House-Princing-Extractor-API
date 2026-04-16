@@ -83,6 +83,8 @@ def _obtener_campo(match_data, campo_principal, campo_secundario=None):
 # ==============================================================================
 
 def obtener_tasacion(session, match_data, csrf_token, url_base="https://www.housepricing.cl", worker_id="N/A", max_intentos=3):
+    import requests # Añadido localmente para poder capturar el Timeout de red
+    
     data_result = {
         "tasa_vta_clp": 0,
         "tasa_vta_uf": "0", 
@@ -132,8 +134,8 @@ def obtener_tasacion(session, match_data, csrf_token, url_base="https://www.hous
         "property_type": property_type_code,
         "unit": _safe_str(match_data.get("unidad")),
         "year": _safe_str(_obtener_campo(match_data, "year", "year")),
-        "m2_util": _safe_str(m2_util_bruto),    # Valor procesado
-        "m2_total": _safe_str(m2_total_bruto),  # Valor procesado y blindado
+        "m2_util": _safe_str(m2_util_bruto),    
+        "m2_total": _safe_str(m2_total_bruto),  
         "bedrooms": _safe_str(_obtener_campo(match_data, "bedrooms")),
         "bathrooms": _safe_str(_obtener_campo(match_data, "bathrooms")),
         "parking": _safe_str(_obtener_campo(match_data, "parking")),
@@ -162,26 +164,32 @@ def obtener_tasacion(session, match_data, csrf_token, url_base="https://www.hous
                 timeout=15
             )
 
+            # --- NUEVA SEMÁNTICA: Control de Errores HTTP ---
             if res_post.status_code != 200:
-                logger.warning(f"      ⚠️ [Worker-{worker_id}] Error HTTP {res_post.status_code} al generar tasación.")
+                if res_post.status_code in [401, 403]:
+                    logger.warning(f"      ⚠️ [Worker-{worker_id}] House Pricing bloqueó la consulta de tasación (Posible baneo de IP o sesión expirada).")
+                elif res_post.status_code >= 500:
+                    logger.warning(f"      ⚠️ [Worker-{worker_id}] El servidor de House Pricing falló internamente al calcular la tasación (Error 500).")
+                else:
+                    logger.warning(f"      ⚠️ [Worker-{worker_id}] Error HTTP {res_post.status_code} al generar tasación.")
                 continue
 
             try:
                 response_data = res_post.json()
             except json.JSONDecodeError:
-                # Modificación permanente para capturar el error exacto del frontend
+                # --- SEMÁNTICA EXISTENTE MEJORADA: Captura de errores de validación del formulario de HP ---
                 soup_error = BeautifulSoup(res_post.text, "html.parser")
                 alerta_error = soup_error.find("div", class_=lambda c: c and "bg-red-100" in c)
                 
-                mensaje_error = "Error desconocido (no se encontró texto de error en el HTML)"
+                mensaje_error = "El formato de los datos enviados no fue aceptado por la plataforma."
                 if alerta_error:
                     mensaje_error = " ".join(alerta_error.stripped_strings)
                 
-                logger.warning(f"      ⚠️ [Worker-{worker_id}] El servidor rechazó el form. Mensaje del sitio: {mensaje_error}")
+                logger.warning(f"      ⚠️ [Worker-{worker_id}] Tasación rechazada por datos inválidos. Razón de HP: '{mensaje_error}'")
                 continue
             
             if not response_data.get("success") or "redirect" not in response_data:
-                logger.warning(f"      ⚠️ [Worker-{worker_id}] Respuesta JSON sin redirect válido: {response_data}")
+                logger.warning(f"      ⚠️ [Worker-{worker_id}] La plataforma no devolvió un enlace válido para ver la tasación calculada.")
                 continue
 
             url_redirect = f"{url_base}{response_data['redirect']}"
@@ -191,7 +199,7 @@ def obtener_tasacion(session, match_data, csrf_token, url_base="https://www.hous
             res_get = session.get(url_redirect, headers={"Referer": f"{url_base}/tasacion-de-propiedades/"}, timeout=15)
             
             if res_get.status_code != 200:
-                logger.warning(f"      ⚠️ [Worker-{worker_id}] Error HTTP {res_get.status_code} al cargar HTML final.")
+                logger.warning(f"      ⚠️ [Worker-{worker_id}] Error HTTP {res_get.status_code} al intentar visualizar la tasación final.")
                 continue
 
             soup = BeautifulSoup(res_get.text, "html.parser")
@@ -215,10 +223,14 @@ def obtener_tasacion(session, match_data, csrf_token, url_base="https://www.hous
             logger.success(f"      ✅ [Worker-{worker_id}] Tasación Extraída: Venta ${data_result['tasa_vta_clp']} | Arriendo ${data_result['tasa_arr_clp']}")
             return data_result
 
+        # --- NUEVA SEMÁNTICA: Captura de errores explícitos de red ---
         except requests.exceptions.Timeout:
-            logger.warning(f"      ⏳ [Worker-{worker_id}] Timeout en la red (Intento {intento}).")
+            logger.warning(f"      ⏳ [Worker-{worker_id}] Tiempo de espera agotado al consultar la tasación (Intento {intento}).")
+        except requests.exceptions.RequestException as e_net:
+            logger.warning(f"      🔌 [Worker-{worker_id}] Error de red conectando al servidor de tasación: {e_net}")
         except Exception as e:
-            logger.error(f"      ❌ [Worker-{worker_id}] Error inesperado extrayendo tasación: {str(e)}")
+            logger.error(f"      ❌ [Worker-{worker_id}] Error estructural inesperado extrayendo la tasación: {str(e)}")
             
-    logger.error(f"   ❌ [Worker-{worker_id}] Agotados los {max_intentos} intentos para tasación.")
+    # Si llega hasta aquí, fallaron todos los intentos, pero NO levantamos una excepción para no romper la descarga del PDF.
+    logger.error(f"   🚫 [Worker-{worker_id}] Se agotaron los {max_intentos} intentos. La propiedad continuará su flujo sin tasación (valores en 0).")
     return data_result

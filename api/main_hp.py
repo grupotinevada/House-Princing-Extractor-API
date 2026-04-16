@@ -221,7 +221,7 @@ def main(cancel_event, ruta_lista=None, progress_callback=None):
             continue
 
         estado_hp = prop.get("house_pricing", {}).get("comparables", [])
-        if isinstance(estado_hp, str) and ("Error" in estado_hp or "Sin resultados" in estado_hp):
+        if isinstance(estado_hp, str):
             errores_p2.append({"rol": rol_actual, "paso": "Búsqueda HP", "motivo": estado_hp})
         
         json_limpio.append(prop)

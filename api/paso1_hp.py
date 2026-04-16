@@ -491,6 +491,7 @@ def parse_house_pricing_text(full_text: str, link_map: Dict[str, str] = {}) -> D
 
     return data
 
+
 # ==============================================================================
 # PROCESAMIENTO EN LOTE 
 # ==============================================================================
@@ -514,28 +515,48 @@ def procesar_lote_pdfs(carpeta_entrada: str, cancel_event, callback_progreso=Non
         if callback_progreso:
             callback_progreso(idx, total_archivos)
 
-
         ruta_completa = os.path.join(carpeta_entrada, archivo)
         logger.info(f"👉 [{idx+1}/{total_archivos}] Procesando: {archivo}")
         
+        # --- NUEVA SEMÁNTICA: Inferir datos por si el archivo está roto ---
+        rol_inferido = "Desconocido"
+        comuna_inferida = "Desconocida"
         try:
+            nombre_sin_ext = archivo.replace(".pdf", "")
+            partes = nombre_sin_ext.split("_")
+            if len(partes) >= 2:
+                rol_inferido = partes[-1]
+                comuna_inferida = "_".join(partes[:-1])
+        except:
+            pass
+
+        try:
+            # --- NUEVA SEMÁNTICA: Validación de archivo corrupto o vacío ---
+            tamanio = os.path.getsize(ruta_completa)
+            if tamanio == 0:
+                raise Exception("El PDF descargado está corrupto, ilegible o vacío (0 KB).")
+
             full_text = ""
             link_mapping = {}
 
-            with pdfplumber.open(ruta_completa) as pdf:
-                logger.debug(f"   📖 Abierto {archivo} con pdfplumber ({len(pdf.pages)} páginas)")
-                
-                # 1. Mapeo de Links (Coordenadas)
-                link_mapping = map_roles_to_links(pdf)
-                
-                # 2. Extracción de Texto Completo
-                construcciones_espaciales = []
-                for p_idx, page in enumerate(pdf.pages):
-                    text = page.extract_text(layout=True)
-                    if text: full_text += text + "\n"
+            # --- NUEVA SEMÁNTICA: Captura de errores internos de la librería ---
+            try:
+                with pdfplumber.open(ruta_completa) as pdf:
+                    logger.debug(f"   📖 Abierto {archivo} con pdfplumber ({len(pdf.pages)} páginas)")
+                    
+                    # 1. Mapeo de Links (Coordenadas)
+                    link_mapping = map_roles_to_links(pdf)
+                    
+                    # 2. Extracción de Texto Completo
+                    construcciones_espaciales = []
+                    for p_idx, page in enumerate(pdf.pages):
+                        text = page.extract_text(layout=True)
+                        if text: full_text += text + "\n"
 
-                # Extracción espacial de construcciones (más robusta que regex de línea)
-                construcciones_espaciales = extraer_construcciones_espacial(pdf)
+                    # Extracción espacial de construcciones (más robusta que regex de línea)
+                    construcciones_espaciales = extraer_construcciones_espacial(pdf)
+            except Exception as e_pdf:
+                raise Exception(f"El archivo PDF no tiene un formato válido o está protegido contra lectura. Detalle técnico: {e_pdf}")
 
             # 3. Parsing
             datos_extraidos = parse_house_pricing_text(full_text, link_map=link_mapping)
@@ -544,6 +565,10 @@ def procesar_lote_pdfs(carpeta_entrada: str, cancel_event, callback_progreso=Non
             if construcciones_espaciales:
                 datos_extraidos["construcciones"] = construcciones_espaciales
                 logger.info(f"   ✅ Construcciones por extracción espacial: {len(construcciones_espaciales)} registros.")
+
+            # --- NUEVA SEMÁNTICA: Cambio de formato en HP ---
+            if not datos_extraidos["informacion_general"].get("rol"):
+                raise Exception("No se detectó el Rol en el PDF. Es posible que el formato del documento origen de House Pricing haya cambiado.")
 
             # --- LECTURA DE METADATA (TASACIONES) ---
             link_informe_recuperado = None
@@ -591,18 +616,25 @@ def procesar_lote_pdfs(carpeta_entrada: str, cancel_event, callback_progreso=Non
             # Fusionamos la tasación en la raíz del objeto para que Paso 3 y 4 la encuentren fácil
             datos_extraidos.update(tasacion_data)
             
-            if datos_extraidos["informacion_general"].get("rol"):
-                resultados_json.append(datos_extraidos)
-                logger.success(f"✅ ÉXITO: {archivo} procesado y datos estructurados.")
-            else:
-                logger.warning(f"⚠️ DATOS PARCIALES: {archivo} procesado pero no se detectó ROL principal.")
+            resultados_json.append(datos_extraidos)
+            logger.success(f"✅ ÉXITO: {archivo} procesado y datos estructurados.")
 
         except Exception as e:
-            logger.error(f"❌ FATAL: Error leyendo {archivo}. Excepción: {e}", exc_info=True)
+            logger.error(f"❌ FATAL: Error leyendo {archivo}. Excepción: {e}")
+            # --- NUEVA SEMÁNTICA: En vez de un continue vacío, mandamos el error estructurado al Paso 2 ---
+            resultados_json.append({
+                "ID_Propiedad": str(uuid.uuid4()),
+                "informacion_general": {
+                    "rol": rol_inferido,
+                    "comuna": comuna_inferida
+                },
+                "FATAL_ERROR_DATA": True,
+                "motivo_error": str(e)
+            })
             continue
 
     if callback_progreso:
         callback_progreso(total_archivos, total_archivos)
 
-    logger.success(f"🎉 Proceso de lote finalizado. Total extraídos: {len(resultados_json)}")
+    logger.success(f"🎉 Proceso de lote finalizado. Total extraídos/evaluados: {len(resultados_json)}")
     return resultados_json

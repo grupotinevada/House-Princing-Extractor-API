@@ -196,8 +196,14 @@ class HousePricingClient:
             res_search = self.session.post(URL_BUSQUEDA_ROL, data=search_data, headers={
                 "X-Requested-With": "XMLHttpRequest",
                 "Referer": f"{URL_BASE}/dashboard/informe-antecedentes/"
-            })
+            }, timeout=20)
             
+            # --- NUEVA SEMÁNTICA: Control de Errores HTTP ---
+            if res_search.status_code in [401, 403]:
+                raise Exception("Acceso bloqueado por House Pricing (posible bloqueo de IP o Captcha activo).")
+            elif res_search.status_code >= 500:
+                raise Exception(f"El servidor de House Pricing está caído o en mantenimiento (Error HTTP {res_search.status_code}).")
+
             search_json = res_search.json()
             if not search_json.get("success") or not search_json.get("match"):
                 logger.error(f"   ❌ [Worker-{self.worker_id}] Rol {rol_formateado} no encontrado en {comuna}")
@@ -221,12 +227,13 @@ class HousePricingClient:
                 "HX-Request": "true",
                 "X-Requested-With": "XMLHttpRequest",
                 "Referer": f"{URL_BASE}/dashboard/informe-antecedentes/"
-            })
+            }, timeout=20)
             
             poll_match = re.search(r'hx-get="(/dashboard/informe-antecedentes-check/[\w/]+)"', res_trigger.text)
             if not poll_match:
                 logger.error(f"   ❌ [Worker-{self.worker_id}] No se encontró el link de seguimiento (Polling).")
-                return False
+                # --- NUEVA SEMÁNTICA: Cambio de estructura web ---
+                raise Exception("Error técnico: No se encontró el enlace de generación del documento. Posible cambio en la web de House Pricing.")
             
             poll_url = f"{URL_BASE}{poll_match.group(1)}"
             logger.info(f"   ⏳ [Worker-{self.worker_id}] Informe en proceso. Iniciando polling...")
@@ -240,7 +247,7 @@ class HousePricingClient:
                 res_check = self.session.get(poll_url, headers={
                     "HX-Request": "true",
                     "X-Requested-With": "XMLHttpRequest"
-                })
+                }, timeout=15)
                 
                 if ".pdf" in res_check.text:
                     soup_check = BeautifulSoup(res_check.text, "html.parser")
@@ -250,21 +257,29 @@ class HousePricingClient:
 
             if not pdf_url:
                 logger.error(f"   ❌ [Worker-{self.worker_id}] Timeout: El servidor no entregó el PDF a tiempo.")
-                return False
+                # --- NUEVA SEMÁNTICA: Timeout de procesamiento interno HP ---
+                raise Exception("Tiempo de espera agotado (Timeout). House Pricing no generó el PDF a tiempo.")
 
             self._random_delay(0.5, 1.5) # Pausa antes de la descarga
 
             # 4. Descarga de PDF Directa a Memoria -> Disco
             logger.debug(f"   📥 [Worker-{self.worker_id}] Descargando PDF desde link final...")
-            res_pdf = self.session.get(pdf_url, stream=True)
+            res_pdf = self.session.get(pdf_url, stream=True, timeout=20)
             res_pdf.raise_for_status()
 
             nombre_archivo = f"{comuna}_{rol_formateado}.pdf".replace(" ", "_").replace("/", "-")
             ruta_pdf = os.path.join(OUTPUT_FOLDER, nombre_archivo)
             
+            tamanio_descargado = 0
             with open(ruta_pdf, "wb") as f:
                 for chunk in res_pdf.iter_content(chunk_size=8192):
-                    f.write(chunk)
+                    if chunk:
+                        f.write(chunk)
+                        tamanio_descargado += len(chunk)
+            
+            # --- NUEVA SEMÁNTICA: Validación de archivo corrupto ---
+            if tamanio_descargado == 0:
+                raise Exception("El PDF descargado desde House Pricing está corrupto, ilegible o vacío (0 KB).")
             
             # 5. Metadata (Tasaciones a 0 como se especificó en la lógica request)
             datos_tasacion = obtener_tasacion(
@@ -291,9 +306,17 @@ class HousePricingClient:
             logger.success(f"   ✅ [Worker-{self.worker_id}] PDF y metadata guardados: {nombre_archivo}")
             return True
 
+        # --- NUEVA SEMÁNTICA: Captura explícita de errores de Red ---
+        except requests.exceptions.Timeout:
+            logger.warning(f"   ⏳ [Worker-{self.worker_id}] Timeout en la red.")
+            raise Exception("Tiempo de espera de red agotado. Los servidores de House Pricing están lentos o no responden.")
+        except requests.exceptions.RequestException as e:
+            logger.warning(f"   🔌 [Worker-{self.worker_id}] Falla de conexión HTTP: {e}")
+            raise Exception("Error de conexión de red con los servidores de House Pricing.")
         except Exception as e:
             logger.error(f"   ❌ [Worker-{self.worker_id}] Error inesperado en requests: {e}")
-            return False
+            # Se lanza la excepción hacia el worker para que la atrape y ponga en el dict
+            raise
 
 # ==============================================================================
 # WORKER ADAPTADO A REQUESTS
@@ -306,7 +329,8 @@ def procesar_lote_worker(id_worker, sublista_propiedades, cancel_event):
     try:
         if not client.login(EMAIL_HP, PASS_HP):
             for i in sublista_propiedades:
-                i['motivo_error'] = "Fallo Login"
+                # --- NUEVA SEMÁNTICA: Detalle de Login ---
+                i['motivo_error'] = "Fallo de Login: House Pricing rechazó el inicio de sesión o el servidor está caído."
                 fallidos.append(i)
             return 0, fallidos
         
@@ -314,31 +338,52 @@ def procesar_lote_worker(id_worker, sublista_propiedades, cancel_event):
             if cancel_event.is_set(): break
             
             exito_item = False
-            resultado = client.buscar_y_descargar(item['rol'], item['comuna'], cancel_event)
+            motivo_fallo = "Error desconocido de red." # Variable que arrastra el último error detectado
             
-            if resultado == "ROL_NOT_FOUND":
-                logger.error(f"      🚫 [Worker-{id_worker}] Saltando {item['rol']}: No existe en el servidor.")
-                item['motivo_error'] = "Rol no encontrado"
-                fallidos.append(item)
-                continue 
+            try:
+                resultado = client.buscar_y_descargar(item['rol'], item['comuna'], cancel_event)
+                
+                if resultado == "ROL_NOT_FOUND":
+                    logger.error(f"      🚫 [Worker-{id_worker}] Saltando {item['rol']}: No existe en el servidor.")
+                    # --- NUEVA SEMÁNTICA: Rol no existe ---
+                    item['motivo_error'] = "El rol ingresado no existe en los registros de House Pricing para esta comuna."
+                    fallidos.append(item)
+                    continue 
 
-            if resultado is True:
-                exitos += 1
-                exito_item = True
-            else:
+                if resultado is True:
+                    exitos += 1
+                    exito_item = True
+                else:
+                    raise Exception("Fallo genérico durante el intento inicial de descarga.")
+            
+            except Exception as error_inicial:
+                motivo_fallo = str(error_inicial)
+                
+                # Ejecuta los reintentos manteniendo tu estructura original
                 for intento in range(1, 3):
                     if cancel_event.is_set(): break
-                    logger.warning(f"      🔄 [Worker-{id_worker}] Reintento {intento+1}/3 para {item['rol']}...")
+                    logger.warning(f"      🔄 [Worker-{id_worker}] Reintento {intento+1}/3 para {item['rol']}... (Previo: {motivo_fallo})")
                     client._random_delay(5.0, 10.0) # Castigo de tiempo si falló (Anti-block)
                     
-                    if client.buscar_y_descargar(item['rol'], item['comuna'], cancel_event) is True:
-                        exitos += 1
-                        exito_item = True
-                        break
+                    try:
+                        resultado = client.buscar_y_descargar(item['rol'], item['comuna'], cancel_event)
+                        
+                        if resultado is True:
+                            exitos += 1
+                            exito_item = True
+                            break
+                        elif resultado == "ROL_NOT_FOUND":
+                            motivo_fallo = "El rol ingresado no existe en los registros de House Pricing para esta comuna."
+                            break
+                        else:
+                            raise Exception("Fallo genérico en reintento.")
+                    except Exception as error_reintento:
+                        motivo_fallo = str(error_reintento)
             
             if not exito_item:
+                # Si falló después de todos los intentos, le asigna el último error real capturado
                 if 'motivo_error' not in item:
-                    item['motivo_error'] = "Error Descarga/Timeout"
+                    item['motivo_error'] = motivo_fallo
                 fallidos.append(item)
                 
     except Exception as e:
