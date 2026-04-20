@@ -370,6 +370,8 @@ COMUNAS_TRADUCTOR = {
     "cisnes": "Cisnes",
     "guaitecas": "Guaitecas",
     "coihaique": "Coyhaique",
+    "coyhaique": "Coyhaique",
+    "Coyhaique": "Coyhaique",
     "lago verde": "Lago Verde",
     "chile chico": "Chile Chico",
     "rio ibanez": "Río Ibáñez",
