@@ -7,14 +7,12 @@ import math
 from typing import List, Dict, Any, Optional
 from concurrent.futures import ThreadPoolExecutor
 
-# --- DEPENDENCIAS PARA EL ABREPUERTAS ---
-import undetected_chromedriver as uc
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support.ui import WebDriverWait, Select
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.action_chains import ActionChains
-from pyvirtualdisplay import Display
-# -----------------------------------------------
+from selenium.common.exceptions import TimeoutException
 
 from dotenv import load_dotenv
 from logger import get_logger
@@ -30,12 +28,9 @@ URL_TASACIONES = os.getenv("URL_TASACIONES")
 EMAIL_HP = os.getenv("USUARIO_HP")
 PASS_HP = os.getenv("PASSWORD_HP")
 
-# Endpoints directos para requests
-URL_BUSQUEDA_ROL = f"{URL_BASE}/search-rol/"
-URL_GENERAR_INFORME = f"{URL_BASE}/dashboard/informe-antecedentes-resultado/"
-URL_CHECK_INFORME = f"{URL_BASE}/dashboard/informe-antecedentes-check/"
-
-WORKERS = 5 
+OPTIMIZAR_CARGA = True 
+MANTENER_NAVEGADOR = False
+WORKERS = 2 
 
 if not URL_ANTECEDENTES or not URL_LOGIN:
     logger.error("❌ ERROR CRÍTICO: No se cargaron las URL del archivo .env")
@@ -90,251 +85,540 @@ def estandarizar_data(lista_cruda: List[Dict[str, Any]]) -> List[Dict[str, Any]]
     return lista_limpia
 
 # ==============================================================================
-# 2 y 3. LÓGICA DE DESCARGA VIA REQUESTS (REEMPLAZO SELENIUM)
+# 2. CONFIGURACIÓN SELENIUM (SOLO AGREGADO PARAMETRO DE CARPETA)
 # ==============================================================================
-class HousePricingClient:
-    def __init__(self, worker_id="N/A"):
-        self.session = requests.Session()
-        self.worker_id = worker_id
-        # Cabeceras robustas para simular navegador real
-        self.session.headers.update({
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-            "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
-            "Connection": "keep-alive",
-            "Upgrade-Insecure-Requests": "1"
-        })
-        self.csrf_token = None
-
-    def _update_csrf_from_cookies(self):
-        self.csrf_token = self.session.cookies.get("csrftoken")
-        if self.csrf_token:
-            self.session.headers.update({"X-CSRFToken": self.csrf_token})
-
-    def _random_delay(self, min_s=1.5, max_s=3.5):
-        """Previene rate-limiting simulando tiempos de interacción humana."""
-        time.sleep(random.uniform(min_s, max_s))
-
-    def login(self, email, password):
-        logger.info(f"🔐 [Worker-{self.worker_id}] Intentando login para: {email}")
+def _configurar_driver(carpeta_descarga=None):
+    target = carpeta_descarga if carpeta_descarga else OUTPUT_FOLDER
+    
+    logger.info("🔧 Configurando Driver Chrome (Opciones y Preferencias - Modo Ahorro)...")
+    options = Options()
+    
+    # Optimización de recursos
+    options.add_argument("--headless=new") 
+    options.add_argument("--disable-gpu")
+    options.add_argument("--disable-extensions")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-blink-features=AutomationControlled")
+    options.add_argument("--window-size=1920,1080")
+    
+    options.page_load_strategy = 'eager'
+    
+    logger.debug(f"   📂 Carpeta de descargas configurada: {target}")
+    prefs = {
+        "download.default_directory": target,
+        "download.prompt_for_download": False,
+        "download.directory_upgrade": True,
+        "plugins.always_open_pdf_externally": True,
         
-        login_form_url = f"{URL_BASE}/login-service/?next=/dashboard/"
-        login_service_url = f"{URL_BASE}/login-service/"
+        # Desactivar visor de imágenes y notificaciones (Optimización)
+        "profile.managed_default_content_settings.images": 2, 
+        "profile.default_content_setting_values.notifications": 2, 
+        
+        # --- NUEVO: Desactivar Escaneo SafeBrowsing (EL BLINDAJE) ---
+        "safebrowsing.enabled": False,  # Mantenemos el servicio activo...
+        "safebrowsing.disable_download_protection": True, # ...pero desactivamos protección de descargas
+        "profile.default_content_settings.popups": 0,
+        "profile.content_settings.exceptions.automatic_downloads.*.setting": 1,
+        
+        # Forzar que NO pregunte por confirmación en descargas peligrosas
+        "download.prompt_for_download": False,
+        "safebrowsing.disable_extension_blacklist": True,
+    }
 
-        # Simular llegada a la web principal
-        self.session.get(URL_BASE)
-        self._random_delay(1.0, 2.0)
+    logger.debug(f"informacion de configuracion del driver: {options}")
 
-        logger.debug(f"   ➡️ [Worker-{self.worker_id}] Pidiendo el formulario de login dinámico...")
-        res_form = self.session.get(
-            login_form_url,
-            headers={
-                "Referer": f"{URL_BASE}/login/",
-                "X-Requested-With": "XMLHttpRequest",
-                "Accept": "*/*"
+    options.add_experimental_option("prefs", prefs)
+    return webdriver.Chrome(options=options)
+
+def _reparar_descargas_bloqueadas(driver):
+    """
+    Entra al gestor de descargas de Chrome, busca items bloqueados/peligrosos
+    y fuerza la aprobación (Click en 'Conservar' / 'Keep').
+    """
+    logger.info("   🚑 Iniciando protocolo de reparación de descargas en Chrome...")
+    reparado = False
+    try:
+        # Abrir pestaña de descargas
+        driver.execute_script("window.open('chrome://downloads/', '_blank');")
+        time.sleep(1) # Esperar apertura
+        driver.switch_to.window(driver.window_handles[-1])
+        
+        # Script JS para penetrar Shadow DOM y hacer click en "Conservar"
+        # Busca botones de acción en items peligrosos
+        js_fix = """
+            const manager = document.querySelector('downloads-manager');
+            if (manager && manager.shadowRoot) {
+                const items = manager.shadowRoot.querySelectorAll('downloads-item');
+                if (items.length > 0) {
+                    const item = items[0]; // Miramos el último archivo (el de arriba)
+                    
+                    // Si está en estado peligroso o advertencia
+                    if (item.state === 'DANGEROUS' || item.state === 'IN_PROGRESS') {
+                        
+                        // Intento 1: Botón "Conservar" (Save) en el Shadow DOM
+                        const saveBtn = item.shadowRoot.querySelector('cr-button[focus-type="save"]');
+                        if (saveBtn) {
+                            saveBtn.click();
+                            return "FIXED_SAVE";
+                        }
+                        
+                        // Intento 2: Botón de acción genérica "Conservar" (Dangerous)
+                        const dangerousBtn = item.shadowRoot.querySelector('#dangerous .action-button');
+                        if (dangerousBtn) {
+                            dangerousBtn.click();
+                            return "FIXED_DANGEROUS";
+                        }
+                        
+                        // Intento 3: Enlace "Conservar archivo peligroso" (versiones antiguas)
+                        const linkKeep = item.shadowRoot.querySelector('a#safe');
+                        if (linkKeep) {
+                            linkKeep.click();
+                            return "FIXED_LINK";
+                        }
+                        
+                        return "FOUND_BUT_NO_BUTTON";
+                    }
+                }
             }
-        )
-
-        self.csrf_token = self.session.cookies.get("csrftoken")
-        soup = BeautifulSoup(res_form.text, "html.parser")
-        token_input = soup.find("input", {"name": "csrfmiddlewaretoken"})
+            return "NO_ISSUE_FOUND";
+        """
         
-        if token_input:
-            self.csrf_token = token_input["value"]
-        elif not self.csrf_token:
-            logger.error(f"❌ [Worker-{self.worker_id}] Fracasó la obtención del CSRF.")
-            return False
-
-        self._random_delay(2.0, 4.0) # Tiempo humano llenando credenciales
-
-        data = {
-            "csrfmiddlewaretoken": self.csrf_token,
-            "next": "/dashboard/",
-            "email": email,
-            "password": password
-        }
-
-        logger.debug(f"   ➡️ [Worker-{self.worker_id}] Enviando credenciales...")
-        res_post = self.session.post(
-            login_service_url, 
-            data=data, 
-            headers={
-                "Referer": f"{URL_BASE}/login/",
-                "Origin": URL_BASE,
-                "X-Requested-With": "XMLHttpRequest",
-                "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"
-            }
-        )
+        # Ejecutamos el fix
+        resultado = driver.execute_script(js_fix)
+        logger.debug(f"   🔧 Resultado script reparación: {resultado}")
         
-        if "sessionid" in self.session.cookies:
-            logger.success(f"✅ [Worker-{self.worker_id}] Login exitoso via Requests.")
-            self._update_csrf_from_cookies()
-            return True
+        if "FIXED" in resultado:
+            reparado = True
+            time.sleep(2) # Dar tiempo a Chrome para finalizar la escritura en disco
             
+    except Exception as e:
+        logger.warning(f"   ⚠️ Falló el intento de reparación manual: {e}")
+    finally:
+        # Cerrar pestaña de descargas y volver a la principal
+        if len(driver.window_handles) > 1:
+            driver.close()
+            driver.switch_to.window(driver.window_handles[0])
+            
+    return reparado
+
+
+def _esperar_descarga(carpeta, timeout=60):
+    logger.debug(f"   ⏳ Monitoreando carpeta {carpeta} (Timeout: {timeout}s)...")
+    fin = time.time() + timeout
+    while time.time() < fin:
+        if glob.glob(os.path.join(carpeta, "*.crdownload")):
+            time.sleep(0.5)
+            continue
+        archivos = glob.glob(os.path.join(carpeta, "*.pdf"))
+        if archivos:
+            ultimo_archivo = max(archivos, key=os.path.getctime)
+            try:
+                if time.time() - os.path.getctime(ultimo_archivo) < timeout and os.path.getsize(ultimo_archivo) > 0:
+                    logger.debug(f"   📄 Archivo detectado: {os.path.basename(ultimo_archivo)}")
+                    return str(ultimo_archivo)
+            except:
+                pass
+        time.sleep(1)
+    logger.warning("   ⚠️ No se detectó archivo nuevo tras el tiempo de espera.")
+    return None
+
+def _iniciar_sesion_hp(driver, wait):
+    logger.info("🔐 Iniciando proceso de Login...")
+    driver.get(URL_LOGIN)
+    try:
+        logger.debug("   ⌨️ Ingresando credenciales...")
+        wait.until(EC.element_to_be_clickable((By.ID, "id_email"))).send_keys(EMAIL_HP)
+        driver.find_element(By.ID, "id_password").send_keys(PASS_HP)
+        driver.find_element(By.ID, "hp-login-btn").click()
+        
+        logger.debug("   ⏳ Esperando redirección post-login...")
+        wait.until(lambda d: "/login" not in d.current_url)
+        logger.success("✅ Login exitoso. Sesión iniciada.")
+        return True
+    except Exception as e:
+        logger.error(f"❌ Error en Login: {e}", exc_info=True)
         try:
-            respuesta_json = res_post.json()
-            if respuesta_json.get("success", False) or "redirect" in res_post.text:
-                logger.success(f"✅ [Worker-{self.worker_id}] Login exitoso via Requests (JSON OK).")
-                self._update_csrf_from_cookies()
-                return True
+            timestamp = int(time.time())
+            # 1. Tomar FOTO de lo que ve el bot
+            screenshot_path = f"debug_login_fail_{timestamp}.png"
+            driver.save_screenshot(screenshot_path)
+            logger.warning(f"📸 Screenshot del error guardado en: {screenshot_path}")
+            
+            # 2. Guardar HTML para ver si hay mensajes de error ocultos
+            with open(f"debug_login_fail_{timestamp}.html", "w", encoding="utf-8") as f:
+                f.write(driver.page_source)
+            logger.warning(f"📄 HTML del error guardado.")
+            
+            # 3. Intentar leer mensaje de error en pantalla
+            if "credenciales" in driver.page_source.lower() or "incorrecto" in driver.page_source.lower():
+                logger.error("🕵️ DETECTADO: El sitio dice que las credenciales son incorrectas.")
         except:
             pass
-            
-        logger.error(f"❌ [Worker-{self.worker_id}] Falló el login final. HTTP Code: {res_post.status_code}")
         return False
 
-    def buscar_y_descargar(self, rol, comuna, cancel_event):
-        logger.info(f"🔎 [Worker-{self.worker_id}] Procesando: {comuna} - Rol {rol}")
+# ==============================================================================
+# 3. LÓGICA DE DESCARGA (SOLO MODIFICADO EL GUARDADO FINAL)
+# ==============================================================================
+def _descargar_pdf_individual(driver, wait, item, carpeta_temporal):
+    import json 
+    
+    rol = item['rol']
+    comuna = item['comuna']
+    
+    logger.info(f"🔎 Procesando descarga: {comuna} - Rol {rol}")
+
+    try:
+        # Refrescar estado
+        if driver.current_url != URL_ANTECEDENTES:
+            driver.get(URL_ANTECEDENTES)
+        else:
+            driver.refresh()
+        
+        wait.until(EC.presence_of_element_located((By.ID, "select-comuna")))
+
+        # A) COMUNA
+        select_comuna = driver.find_element(By.ID, "select-comuna")
+        driver.execute_script("arguments[0].style.display = 'block';", select_comuna)
         try:
-            self._update_csrf_from_cookies()
-            self._random_delay(1.5, 3.0) # Pausa entre búsquedas
+            Select(select_comuna).select_by_visible_text(comuna)
+            logger.debug(f"   🏙️ Seleccionando comuna '{comuna}'...")
+        except:
+            Select(select_comuna).select_by_visible_text(comuna.title())
+        driver.execute_script("arguments[0].dispatchEvent(new Event('change'));", select_comuna)
+        
 
-            # 1. Buscar Rol
-            rol_formateado = "-".join([p.lstrip("0") or "0" for p in str(rol).replace("−", "-").replace("–", "-").replace("—", "-").split("-")])
-            
-            search_data = {
-                "rol": rol_formateado,
-                "comuna": comuna,
-                "csrfmiddlewaretoken": self.csrf_token
-            }
-            res_search = self.session.post(URL_BUSQUEDA_ROL, data=search_data, headers={
-                "X-Requested-With": "XMLHttpRequest",
-                "Referer": f"{URL_BASE}/dashboard/informe-antecedentes/"
-            }, timeout=20)
-            
-            # --- NUEVA SEMÁNTICA: Control de Errores HTTP ---
-            if res_search.status_code in [401, 403]:
-                raise Exception("Acceso bloqueado por House Pricing (posible bloqueo de IP o Captcha activo).")
-            elif res_search.status_code >= 500:
-                raise Exception(f"El servidor de House Pricing está caído o en mantenimiento (Error HTTP {res_search.status_code}).")
+        # B) ROL
+        input_rol = driver.find_element(By.ID, "rol")
+        logger.debug(f" buscando elemento por ID")
+        input_rol.clear()
+        logger.debug(f" limpiando campo:")
+        rol = "-".join([p.lstrip("0") or "0" for p in str(rol).replace("−", "-").replace("–", "-").replace("—", "-").split("-")])
+        input_rol.send_keys(rol)
+        logger.debug(f" ingresando rol: {rol}")
 
-            search_json = res_search.json()
-            if not search_json.get("success") or not search_json.get("match"):
-                logger.error(f"   ❌ [Worker-{self.worker_id}] Rol {rol_formateado} no encontrado en {comuna}")
-                return "ROL_NOT_FOUND" # Respetando validación original
-            
-            match = search_json["match"][0]
-            self._random_delay(1.0, 2.5) # Simula tiempo de ver resultados
-            
-            # 2. Generar Informe
-            report_payload = {
-                "csrfmiddlewaretoken": self.csrf_token,
-                "rol": match["rol"],
-                "codigo_sii_comuna": match["codigo_sii_comuna"],
-                "latitude": match["latitude"],
-                "longitude": match["longitude"],
-                "address": match["address"],
-                "address_comuna": match["comuna"]
-            }
-            
-            res_trigger = self.session.post(URL_GENERAR_INFORME, data=report_payload, headers={
-                "HX-Request": "true",
-                "X-Requested-With": "XMLHttpRequest",
-                "Referer": f"{URL_BASE}/dashboard/informe-antecedentes/"
-            }, timeout=20)
-            
-            poll_match = re.search(r'hx-get="(/dashboard/informe-antecedentes-check/[\w/]+)"', res_trigger.text)
-            if not poll_match:
-                logger.error(f"   ❌ [Worker-{self.worker_id}] No se encontró el link de seguimiento (Polling).")
-                # --- NUEVA SEMÁNTICA: Cambio de estructura web ---
-                raise Exception("Error técnico: No se encontró el enlace de generación del documento. Posible cambio en la web de House Pricing.")
-            
-            poll_url = f"{URL_BASE}{poll_match.group(1)}"
-            logger.info(f"   ⏳ [Worker-{self.worker_id}] Informe en proceso. Iniciando polling...")
+        # C) BUSCAR
+        btn_buscar = driver.find_element(By.ID, "btn-search-rol")
+        driver.execute_script("arguments[0].click();", btn_buscar)
+        logger.debug(f" CLICK BUSCAR")
 
-            # 3. Polling
-            pdf_url = None
-            for _ in range(35): # Aprox 2.5 minutos de tolerancia
-                if cancel_event.is_set(): return False
-                
-                time.sleep(4)
-                res_check = self.session.get(poll_url, headers={
-                    "HX-Request": "true",
-                    "X-Requested-With": "XMLHttpRequest"
-                }, timeout=15)
-                
-                if ".pdf" in res_check.text:
-                    soup_check = BeautifulSoup(res_check.text, "html.parser")
-                    pdf_url = soup_check.find("a", href=True)["href"]
-                    break
-                logger.debug(f"      ...[Worker-{self.worker_id}] aún procesando...")
-
-            if not pdf_url:
-                logger.error(f"   ❌ [Worker-{self.worker_id}] Timeout: El servidor no entregó el PDF a tiempo.")
-                # --- NUEVA SEMÁNTICA: Timeout de procesamiento interno HP ---
-                raise Exception("Tiempo de espera agotado (Timeout). House Pricing no generó el PDF a tiempo.")
-
-            self._random_delay(0.5, 1.5) # Pausa antes de la descarga
-
-            # 4. Descarga de PDF Directa a Memoria -> Disco
-            logger.debug(f"   📥 [Worker-{self.worker_id}] Descargando PDF desde link final...")
-            res_pdf = self.session.get(pdf_url, stream=True, timeout=20)
-            res_pdf.raise_for_status()
-
-            nombre_archivo = f"{comuna}_{rol_formateado}.pdf".replace(" ", "_").replace("/", "-")
-            ruta_pdf = os.path.join(OUTPUT_FOLDER, nombre_archivo)
-            
-            tamanio_descargado = 0
-            with open(ruta_pdf, "wb") as f:
-                for chunk in res_pdf.iter_content(chunk_size=8192):
-                    if chunk:
-                        f.write(chunk)
-                        tamanio_descargado += len(chunk)
-            
-            # --- NUEVA SEMÁNTICA: Validación de archivo corrupto ---
-            if tamanio_descargado == 0:
-                raise Exception("El PDF descargado desde House Pricing está corrupto, ilegible o vacío (0 KB).")
-            
-            # 5. Metadata (Tasaciones a 0 como se especificó en la lógica request)
-            datos_tasacion = obtener_tasacion(
-                session=self.session, 
-                match_data=match, 
-                csrf_token=self.csrf_token, 
-                url_base=URL_BASE, 
-                worker_id=self.worker_id
+        try:
+            logger.debug("   ⏳ Validando existencia del rol...")
+            condicion = EC.any_of(
+                EC.visibility_of_element_located((By.ID, "btn-submit")),
+                EC.visibility_of_element_located((By.ID, "search-rol-response-container"))
             )
+            # 10 segundos es suficiente para que el servidor responda si el rol existe o no
+            elemento_detectado = WebDriverWait(driver, 10).until(condicion)
+            
+            if elemento_detectado.get_attribute("id") == "search-rol-response-container":
+                error_texto = driver.find_element(By.ID, "search-rol-response").text
+                logger.error(f"   ❌ ERROR DEL SITIO: '{error_texto}' para Rol {rol} en {comuna}")
+                return "ROL_NOT_FOUND"
+                
+        except TimeoutException:
+            logger.warning("   ⚠️ El sitio no respondió a la búsqueda (Timeout validación).")
+            try:
+                timestamp = int(time.time())
+                screenshot_path = f"debug_timeout_{comuna}_{rol}_{timestamp}.png".replace(" ", "_").replace("/", "-")
+                driver.save_screenshot(screenshot_path)
+                logger.warning(f"   📸 Screenshot del error guardado en: {screenshot_path}")
+            except Exception as e_foto:
+                logger.error(f"   ❌ No se pudo tomar screenshot del timeout: {e_foto}")
+            return False
 
-            ruta_json = ruta_pdf + ".json"
-            meta_data = {
-                "link_informe": pdf_url,
-                "rol_origen": rol_formateado,
-                "comuna_origen": comuna,
-                "tasa_vta_clp": datos_tasacion["tasa_vta_clp"],
-                "tasa_vta_uf": datos_tasacion["tasa_vta_uf"],
-                "tasa_arr_clp": datos_tasacion["tasa_arr_clp"],
-                "tasa_arr_uf": datos_tasacion["tasa_arr_uf"]
-            }
-            with open(ruta_json, "w", encoding="utf-8") as f:
-                json.dump(meta_data, f)
+        # PASO 5: Esperar botón Generar
+        logger.debug("   ⏳ Esperando confirmación de propiedad (Botón Generar)...")
+        btn_generar = wait.until(EC.visibility_of_element_located((By.ID, "btn-submit")))
+        
+        # PASO 6: Click Generar
+        driver.execute_script("arguments[0].click();", btn_generar)
+        logger.debug(f" CLICK GENERAR")
 
-            logger.success(f"   ✅ [Worker-{self.worker_id}] PDF y metadata guardados: {nombre_archivo}")
-            return True
+        # --- MODIFICACIÓN 1: TIMEOUT AUMENTADO A 150 SEGUNDOS ---
+        logger.debug("   ⏳ Esperando que el servidor genere el PDF (Timeout: 150s)...")
+        xpath_download = "//a[contains(., 'Descargar PDF')]"
+        
+        # Aumentamos tolerancia para servidores lentos
+        wait_descarga = WebDriverWait(driver, 150) 
+        
+        btn_descarga = wait_descarga.until(EC.element_to_be_clickable((By.XPATH, xpath_download)))
+        
+        # --- CAPTURA DEL LINK ---
+        link_informe = btn_descarga.get_attribute("href")
+        logger.debug(f"   🔗 Link detectado: {link_informe}")
+        # -------------------------------
 
-        # --- NUEVA SEMÁNTICA: Captura explícita de errores de Red ---
-        except requests.exceptions.Timeout:
-            logger.warning(f"   ⏳ [Worker-{self.worker_id}] Timeout en la red.")
-            raise Exception("Tiempo de espera de red agotado. Los servidores de House Pricing están lentos o no responden.")
-        except requests.exceptions.RequestException as e:
-            logger.warning(f"   🔌 [Worker-{self.worker_id}] Falla de conexión HTTP: {e}")
-            raise Exception("Error de conexión de red con los servidores de House Pricing.")
-        except Exception as e:
-            logger.error(f"   ❌ [Worker-{self.worker_id}] Error inesperado en requests: {e}")
-            # Se lanza la excepción hacia el worker para que la atrape y ponga en el dict
-            raise
+        logger.debug(f" CLICK DESCARGAR")        
+        # Limpieza previa
+        for f in glob.glob(os.path.join(carpeta_temporal, "*")):
+            try: os.remove(f)
+            except: pass
+
+        # PASO 9: Descargar
+        logger.info(f"   📥 Informe listo. Click en Descargar PDF...")
+        driver.execute_script("arguments[0].click();", btn_descarga)
+        
+        archivo = _esperar_descarga(carpeta_temporal, timeout=30)
+        
+        if not archivo:
+            logger.warning("   ⚠️ Descarga no finalizada. Verificando bloqueos de Chrome...")
+            se_reparo = _reparar_descargas_bloqueadas(driver)
+            
+            if se_reparo:
+                logger.info("   ✅ Bloqueo reparado. Esperando archivo final...")
+                # 3. Segundo intento de espera (damos 15s extra para que termine de escribir)
+                archivo = _esperar_descarga(carpeta_temporal, timeout=15)
+
+        if archivo:
+            nombre_final = os.path.join(OUTPUT_FOLDER, f"{comuna}_{rol}.pdf".replace(" ", "_").replace("/", "-"))
+            if os.path.exists(nombre_final):
+                try: os.remove(nombre_final)
+                except: pass
+            
+            logger.debug(f" MOVIMIENTO ARCHIVO") # Reintentos de movimiento de archivo
+            movido = False
+            for intento in range(5):
+                logger.debug(f" Reintentos en mover el archivo: {intento + 1}")
+                try:
+                    shutil.move(archivo, nombre_final)
+
+                    datos_tasacion = _extraer_tasaciones(driver, wait, rol, comuna)
+
+                    print(datos_tasacion)
+                    # Guardamos un pequeño JSON con el mismo nombre pero extensión .json
+                    ruta_meta = nombre_final + ".json"
+                    meta_data = {
+                        "link_informe": link_informe,
+                        "rol_origen": rol,        # <--- Para validar luego
+                        "comuna_origen": comuna,
+                        **datos_tasacion
+                    }
+                    with open(ruta_meta, "w", encoding="utf-8") as f:
+                        json.dump(meta_data, f)
+
+                    movido = True
+                    break
+                except PermissionError:
+                    time.sleep(1)
+                except Exception:
+                    time.sleep(1)
+            
+            if movido:
+                logger.success(f"   ✅ Descarga completada: {os.path.basename(nombre_final)}")
+                return True
+            else:
+                logger.error(f"   ❌ No se pudo mover el archivo final: {nombre_final}")
+                return False
+        else:
+            logger.error("   ❌ Timeout definitivo: El archivo no se descargó (incluso tras intento de reparación).")
+            return False
+
+    except Exception as e:
+        logger.error(f"   ❌ Fallo durante la descarga: {e}")
+        return False
+
+    except Exception as e:
+        logger.error(f"   ❌ Fallo durante la descarga: {e}")
+        return False
 
 # ==============================================================================
-# WORKER ADAPTADO A REQUESTS
+# 4. Extraer tasaciones (FASE 2: NAVEGACIÓN WIZARD)
+# ==============================================================================
+def _extraer_tasaciones(driver, wait, rol, comuna):
+    """
+    Navega al tasador, busca la propiedad y avanza por el wizard (Next -> Next -> Ver Tasación).
+    Incluye lógica de reintento si aparece una alerta de error del sitio o timeout del servidor.
+    """
+    # IMPORT CRÍTICO: Aseguramos que todas las excepciones estén disponibles en este scope
+    from selenium.common.exceptions import UnexpectedAlertPresentException, NoAlertPresentException, TimeoutException
+    
+    logger.info(f"   💰 Iniciando búsqueda en Tasador para {rol} ({comuna})...")
+    
+    # Estructura base
+    data = {
+        "tasa_vta_clp": 0,
+        "tasa_vta_uf": "0", 
+        "tasa_arr_clp": 0,
+        "tasa_arr_uf": "0" 
+    }
+
+    MAX_INTENTOS = 3
+
+    for intento in range(1, MAX_INTENTOS + 1):
+        try:
+            # 1. Navegación (Siempre reiniciamos la navegación en cada intento)
+            driver.get(URL_TASACIONES)
+            
+            # 2. Seleccionar Tab "Rol"
+            try:
+                xpath_toggle = "//label[.//input[@value='search-rol']]"
+                toggle_rol = wait.until(EC.element_to_be_clickable((By.XPATH, xpath_toggle)))
+                toggle_rol.click()
+            except TimeoutException:
+                # Fallback por si el toggle no responde rápido
+                driver.find_element(By.XPATH, "//label[contains(., 'Rol')]").click()
+
+            # 3. Seleccionar Comuna (Lógica Inyección JS)
+            try:
+                select_comuna = driver.find_element(By.ID, "select-comuna")
+                driver.execute_script("arguments[0].style.display = 'block';", select_comuna)
+                try:
+                    Select(select_comuna).select_by_visible_text(comuna)
+                except:
+                    Select(select_comuna).select_by_visible_text(comuna.title())
+                driver.execute_script("arguments[0].dispatchEvent(new Event('change'));", select_comuna)
+            except Exception as e:
+                logger.warning(f"   ⚠️ Error seleccionando comuna en Tasador: {e}")
+
+            # 4. Ingresar Rol
+            input_rol = wait.until(EC.visibility_of_element_located((By.ID, "rol")))
+            input_rol.clear()
+            input_rol.send_keys(rol)
+
+            # 5. Click Buscar
+            btn_buscar = driver.find_element(By.ID, "btn-search-rol")
+            driver.execute_script("arguments[0].click();", btn_buscar)
+            logger.debug(f"   🖱️ [Intento {intento}] Click en Buscar Tasación...")
+
+            # 6. Espera Inteligente: ¿Éxito o Fallo?
+            locator_exito = (By.ID, "form-summary")
+            locator_error = (By.ID, "search-rol-response")
+
+            elemento_resultado = wait.until(EC.any_of(
+                EC.visibility_of_element_located(locator_exito),
+                EC.visibility_of_element_located(locator_error)
+            ))
+
+            # 7. Validación y Navegación del Wizard
+            id_resultado = elemento_resultado.get_attribute("id")
+            
+            if id_resultado == "form-summary":
+                logger.success(f"   ✅ Tasador: Propiedad encontrada. Iniciando secuencia de Wizard...")
+                
+                # --- FASE 2: SECUENCIA DE BOTONES ---
+                
+                # Paso A: Click Siguiente 1 (Características)
+                btn_next_1 = wait.until(EC.element_to_be_clickable((By.ID, "btn-next-1")))
+                driver.execute_script("arguments[0].click();", btn_next_1)
+                
+                # Paso B: Click Siguiente 2 (Mapa/Ubicación)
+                btn_next_2 = wait.until(EC.element_to_be_clickable((By.ID, "btn-next-2")))
+                driver.execute_script("arguments[0].click();", btn_next_2)
+                
+                # Paso C: Click Ver Tasación (Final)
+                btn_next_3 = wait.until(EC.element_to_be_clickable((By.ID, "btn-next-3")))
+                driver.execute_script("arguments[0].click();", btn_next_3)
+                logger.debug("   🚀 Wizard: Paso 3 completado (Ver Tasación). Esperando carga final...")
+                
+                # --- FASE 3 (Extracción de precios final) ---
+                try:
+                    # 1. Esperamos explícitamente a que el botón "Ver Tasación" DESAPAREZCA.
+                    # Esto confirma que el click funcionó y la UI está transicionando.
+                    wait.until(EC.invisibility_of_element_located((By.ID, "btn-next-3")))
+                    
+                    # 2. Definimos un Wait ESPECIAL de 60 segundos para la tasación (el global suele ser corto)
+                    wait_tasacion = WebDriverWait(driver, 150)
+                    
+                    # 3. Esperamos a que aparezca el elemento de precio
+                    xpath_precio_venta = "//h3[contains(., 'Precio estimado de venta')]/following::span[contains(@class, 'text-4xl')]"
+                    wait_tasacion.until(EC.visibility_of_element_located((By.XPATH, xpath_precio_venta)))
+                    
+                except TimeoutException:
+                    logger.warning(f"   ⏳ [Intento {intento}] Timeout esperando generación de precios (Tasación lenta). Reintentando...")
+                    if intento < MAX_INTENTOS:
+                        continue # Reiniciamos el ciclo
+                    else:
+                        logger.error("   ❌ Timeout final: No cargaron los precios tras espera extendida.")
+                        return data
+
+                # Helpers de limpieza locales
+                def clean_clp(txt):
+                    if not txt: return 0
+                    clean = txt.replace('$', '').replace('.', '').strip()
+                    return int(clean) if clean.isdigit() else 0
+
+                def clean_uf(txt):
+                    if not txt: return "0"
+                    clean = txt.replace('UF', '').replace('.', '').strip()
+                    return clean
+
+                try:
+                    # 1. VENTA
+                    raw_vta_clp = driver.find_element(By.XPATH, "//h3[contains(., 'Precio estimado de venta')]/following::span[contains(@class, 'text-4xl')][1]").text
+                    logger.info(f"Valor vta CLP extraido: {raw_vta_clp}")
+                    raw_vta_uf = driver.find_element(By.XPATH, "//h3[contains(., 'Precio estimado de venta')]/following::span[contains(text(), 'UF')][1]").text
+                    logger.info(f"Valor vta UF extraido: {raw_vta_uf}")
+                    
+                    # 2. ARRIENDO
+                    raw_arr_clp = driver.find_element(By.XPATH, "//h3[contains(., 'Precio estimado de arriendo')]/following::span[contains(@class, 'text-4xl')][1]").text
+                    logger.info(f"Valor arr CLP extraido: {raw_arr_clp}")
+                    raw_arr_uf = driver.find_element(By.XPATH, "//h3[contains(., 'Precio estimado de arriendo')]/following::span[contains(text(), 'UF')][1]").text
+                    logger.info(f"Valor arr UF extraido: {raw_arr_uf}")
+                    
+                    # Asignación
+                    data["tasa_vta_clp"] = clean_clp(raw_vta_clp)
+                    data["tasa_vta_uf"] = clean_uf(raw_vta_uf)
+                    data["tasa_arr_clp"] = clean_clp(raw_arr_clp)
+                    data["tasa_arr_uf"] = clean_uf(raw_arr_uf)
+                    
+                    logger.success(f"     💵 Venta: ${data['tasa_vta_clp']} ({data['tasa_vta_uf']} UF) | Arriendo: ${data['tasa_arr_clp']}")
+                    
+                    # Si llegamos aquí sin errores, salimos del loop y retornamos la data válida
+                    return data 
+
+                except Exception as ex_extract:
+                    logger.warning(f"     ⚠️ Error extrayendo textos del DOM: {ex_extract}")
+                    return data
+
+            else:
+                texto_error = elemento_resultado.text
+                logger.warning(f"   ⚠️ Tasador: No encontrada ({texto_error})")
+                return data # Si no existe, no tiene sentido reintentar
+
+        except UnexpectedAlertPresentException as e:
+            # CAPTURA ESPECÍFICA DE LA ALERTA "Error cargando la información"
+            try:
+                alert = driver.switch_to.alert
+                texto_alerta = alert.text
+                alert.accept()
+                logger.warning(f"   🚨 [Intento {intento}/{MAX_INTENTOS}] Alerta del sitio detectada: '{texto_alerta}'. Reintentando flujo...")
+            except NoAlertPresentException:
+                logger.warning(f"   🚨 [Intento {intento}/{MAX_INTENTOS}] Excepción de alerta disparada, pero la alerta ya no está activa.")
+            
+            time.sleep(2) 
+            continue 
+
+        except Exception as e:
+            logger.error(f"   ⚠️ [Intento {intento}/{MAX_INTENTOS}] Excepción general en tasador: {e}")
+            if intento < MAX_INTENTOS:
+                time.sleep(2)
+                continue
+            else:
+                logger.error("   ❌ Fallaron todos los intentos de tasación.")
+                return data
+
+    return data
+
+# ==============================================================================
+#  WORKER = Basicamente el numero de navegadores que se abren al mismo tiempo
 # ==============================================================================
 def procesar_lote_worker(id_worker, sublista_propiedades, cancel_event):
-    client = HousePricingClient(worker_id=id_worker)
+    carpeta_worker = os.path.join(OUTPUT_FOLDER, f"temp_{id_worker}")
+    if not os.path.exists(carpeta_worker):
+        os.makedirs(carpeta_worker)
+
+    driver = _configurar_driver(carpeta_worker)
+    wait = WebDriverWait(driver, 15)
+    
     exitos = 0
     fallidos = [] 
 
     try:
-        if not client.login(EMAIL_HP, PASS_HP):
+        if not _iniciar_sesion_hp(driver, wait):
+            # Si falla la sesión, marcamos todos como error de login
             for i in sublista_propiedades:
-                # --- NUEVA SEMÁNTICA: Detalle de Login ---
-                i['motivo_error'] = "Fallo de Login: House Pricing rechazó el inicio de sesión o el servidor está caído."
+                i['motivo_error'] = "Fallo Login"
                 fallidos.append(i)
             return 0, fallidos
         
@@ -342,47 +626,25 @@ def procesar_lote_worker(id_worker, sublista_propiedades, cancel_event):
             if cancel_event.is_set(): break
             
             exito_item = False
-            motivo_fallo = "Error desconocido de red." # Variable que arrastra el último error detectado
+            resultado = _descargar_pdf_individual(driver, wait, item, carpeta_worker)
             
-            try:
-                resultado = client.buscar_y_descargar(item['rol'], item['comuna'], cancel_event)
-                
-                if resultado == "ROL_NOT_FOUND":
-                    logger.error(f"      🚫 [Worker-{id_worker}] Saltando {item['rol']}: No existe en el servidor.")
-                    # --- NUEVA SEMÁNTICA: Rol no existe ---
-                    item['motivo_error'] = "El rol ingresado no existe en los registros de House Pricing para esta comuna."
-                    fallidos.append(item)
-                    continue 
+            if resultado == "ROL_NOT_FOUND":
+                logger.error(f"      🚫 [Worker-{id_worker}] Saltando {item['rol']}: No existe en el servidor.")
+                item['motivo_error'] = "Rol no encontrado"  # <--- ETIQUETAMOS EL ERROR
+                fallidos.append(item)
+                continue 
 
-                if resultado is True:
-                    exitos += 1
-                    exito_item = True
-                else:
-                    raise Exception("Fallo genérico durante el intento inicial de descarga.")
-            
-            except Exception as error_inicial:
-                motivo_fallo = str(error_inicial)
-                
-                # Ejecuta los reintentos manteniendo tu estructura original
+            if resultado is True:
+                exitos += 1
+                exito_item = True
+            else:
                 for intento in range(1, 3):
                     if cancel_event.is_set(): break
-                    logger.warning(f"      🔄 [Worker-{id_worker}] Reintento {intento+1}/3 para {item['rol']}... (Previo: {motivo_fallo})")
-                    client._random_delay(5.0, 10.0) # Castigo de tiempo si falló (Anti-block)
-                    
-                    try:
-                        resultado = client.buscar_y_descargar(item['rol'], item['comuna'], cancel_event)
-                        
-                        if resultado is True:
-                            exitos += 1
-                            exito_item = True
-                            break
-                        elif resultado == "ROL_NOT_FOUND":
-                            motivo_fallo = "El rol ingresado no existe en los registros de House Pricing para esta comuna."
-                            break
-                        else:
-                            raise Exception("Fallo genérico en reintento.")
-                    except Exception as error_reintento:
-                        motivo_fallo = str(error_reintento)
+                    logger.warning(f"      🔄 [Worker-{id_worker}] Reintento {intento+1}/3 para {item['rol']}...")
+                    if _descargar_pdf_individual(driver, wait, item, carpeta_worker) is True:
+                        exitos += 1
+                        exito_item = True
+                        break
             
             if not exito_item:
                 if 'motivo_error' not in item:
@@ -397,22 +659,13 @@ def procesar_lote_worker(id_worker, sublista_propiedades, cancel_event):
     return exitos, fallidos
 
 # ==============================================================================
-# ORQUESTADOR (INTACTO)
+# ORQUESTADOR (ADAPTADO A THREADPOOLEXECUTOR)
 # ==============================================================================
 def orquestador_descargas(lista_propiedades, cancel_event, callback_progreso=None):
     if not os.path.exists(OUTPUT_FOLDER): os.makedirs(OUTPUT_FOLDER)
     
     total = len(lista_propiedades)
     logger.info(f"🚀 Iniciando ciclo de descargas PARALELO para {total} propiedades. WORKERS={WORKERS}")
-
-    cookies_auth = obtener_cookies_selenium(EMAIL_HP, PASS_HP)
-    if not cookies_auth or "sessionid" not in cookies_auth:
-        logger.error("❌ Fallo crítico: No se pudieron obtener las cookies de sesión con Selenium.")
-        fallidos = []
-        for p in lista_propiedades:
-            p['motivo_error'] = "Fallo de Login: Cloudflare bloqueó el acceso inicial (Turnstile)."
-            fallidos.append(p)
-        return 0, fallidos
 
     chunk_size = math.ceil(total / WORKERS)
     chunks = [lista_propiedades[i:i + chunk_size] for i in range(0, total, chunk_size)]
@@ -424,7 +677,7 @@ def orquestador_descargas(lista_propiedades, cancel_event, callback_progreso=Non
     with ThreadPoolExecutor(max_workers=WORKERS) as executor:
         futures = []
         for i, chunk in enumerate(chunks):
-            futures.append(executor.submit(procesar_lote_worker, i+1, chunk, cancel_event, cookies_auth))
+            futures.append(executor.submit(procesar_lote_worker, i+1, chunk, cancel_event))
         
         for future in futures:
             try:
