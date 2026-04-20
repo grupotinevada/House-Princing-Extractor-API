@@ -1,0 +1,84 @@
+[
+    {
+        "ID_Propiedad": "fd0ea260-63e3-401b-bc85-6edea17f1cc3",
+        "informacion_general": {
+            "direccion": "RIO LONTUE 760",
+            "comuna": "Temuco",
+            "rol": "1210-38",
+            "propietario": "VASQUEZ TORRES INGRID MARGOT"
+        },
+        "caracteristicas": {
+            "Tipo": "Casa",
+            "Destino": "Habitacional",
+            "M2 Construcción": 89.0,
+            "M2 Terreno": 120.0
+        },
+        "avaluo": {
+            "Avalúo Total": 29036718,
+            "Avalúo Exento": 29036718,
+            "Avalúo Afecto": 0,
+            "Contribuciones Semestrales": 0
+        },
+        "roles_cbr": [],
+        "deudas": [
+            {
+                "rol": "Rol 1210-38",
+                "monto": 0,
+                "link_tgr": "https://storage.googleapis.com/public-housepricing/informe_deuda_contribuciones/informe_deuda_contribuciones_9_227_1210_38_3263.pdf"
+            }
+        ],
+        "construcciones": [
+            {
+                "nro": "1",
+                "material": "Madera",
+                "calidad": "Media inferior",
+                "condicion": "",
+                "anio": "1990",
+                "m2": 35.0,
+                "destino": "Habitacional"
+            },
+            {
+                "nro": "2",
+                "material": "Madera",
+                "calidad": "Media inferior",
+                "condicion": "",
+                "anio": "1998",
+                "m2": 15.0,
+                "destino": "Habitacional"
+            },
+            {
+                "nro": "3",
+                "material": "Madera",
+                "calidad": "Media inferior",
+                "condicion": "",
+                "anio": "2013",
+                "m2": 39.0,
+                "destino": "Habitacional"
+            }
+        ],
+        "transaccion": {
+            "monto": "UF 813",
+            "fecha": "24/02/2015",
+            "compradores": [
+                "Vasquez Torres Ingrid Margot"
+            ],
+            "vendedores": []
+        },
+        "informacion_cbr": {
+            "Foja": "1799",
+            "Número": "1930",
+            "Año": "2015",
+            "Acto": "Compraventa"
+        },
+        "raw_text_debug": "Extraido via HTML DOM",
+        "meta_archivo": {
+            "nombre": "Temuco_1210-38.html",
+            "ruta": "./input_pdfs\\Temuco_1210-38.html",
+            "link_informe": "https://www.housepricing.cl/informe-antecedentes/12919/"
+        },
+        "tasa_vta_clp": 0,
+        "tasa_vta_uf": "0",
+        "tasa_arr_clp": 0,
+        "tasa_arr_uf": "0"
+    }
+]
