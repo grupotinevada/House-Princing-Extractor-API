@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime
 
 # Importamos los módulos de lógica
-from . import paso0_hp, paso1_hp, paso2_hp, paso3_hp, paso4_hp
+from . import paso0_hp, paso1_html_hp, paso1_pdf_hp, paso2_hp, paso3_hp, paso4_hp
 from logger import get_logger
 
 # --- CONFIGURACIÓN ---
@@ -163,11 +163,16 @@ def main(cancel_event, ruta_lista=None, progress_callback=None):
         calcular_progreso_global(1, proc, tot, progress_callback)
 
     # Se pasa cancel_event y callback
-    json_propiedades = paso1_hp.procesar_lote_pdfs(CARPETA_PDFS, cancel_event, callback_progreso=cb_paso1)    
+    json_propiedades = paso1_html_hp.procesar_lote_htmls(CARPETA_PDFS, cancel_event, callback_progreso=cb_paso1)    
+    
+    # 2. Si falla o no encuentra archivos HTML, aplicamos el Fallback al extractor PDF original
+    if not json_propiedades:
+        logger.warning("⚠️ No se generó data con HTML. Activando Fallback a lectura de PDFs...")
+        json_propiedades = paso1_pdf_hp.procesar_lote_pdfs(CARPETA_PDFS, cancel_event, callback_progreso=cb_paso1)  
 
     if not json_propiedades:
         if cancel_event.is_set():
-            logger.warning("Proceso cancelado en Paso 1.")
+            logger.warning("Proceso cancelado en Paso 1 no hay data en el json_propiedades.")
             return
         else:
             mensaje_error = "❌ No se generó ningún JSON válido en el Paso 1. Abortando."

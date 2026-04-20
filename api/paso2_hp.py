@@ -3,20 +3,23 @@
 #  Viaja por la pagina , ingresa los datos y extrae la data de las propiedades comparables
 #  Guarda la data en el JSON proveniente del paso 1
 ############################################################################################################################
-############################################################################################################################
-#   ACUERDATE DE EJECUTAR EL PROCESO Y MANDAR EL LOG AL CHAT DE GEMINIS PARA QUE TE EVALUE LOS ERRORES Y SI ESTA FUNCIONANDO LA LOGICA QUE CREAMOS
-############################################################################################################################
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
+
+
+
+#PRUEBA GITHUB ACTION DEVOPS
+import undetected_chromedriver as uc
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait, Select
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.action_chains import ActionChains
+from pyvirtualdisplay import Display
 from bs4 import BeautifulSoup
 import time
 import math
+import random
 import threading
-from concurrent.futures import ThreadPoolExecutor, as_completed # Para paralelismo
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from logger import get_logger, log_section, dbg
 logger = get_logger("paso2_hp", log_dir="logs", log_file="paso2_hp.log")
@@ -433,24 +436,19 @@ def procesar_lote_worker(id_worker, sublista_propiedades, cancel_event, callback
     """
     logger.info(f"👷 [Worker-{id_worker}] Iniciando sesión Selenium...")
     
-    options = Options()
-    options.add_argument("--headless=new")
-    options.add_argument("--disable-gpu")
-    options.add_argument("--disable-extensions")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-blink-features=AutomationControlled")
+    # --- NUEVO: MONITOR VIRTUAL ---
+    display = None
+    if os.name != 'nt':
+        display = Display(visible=0, size=(1920, 1080))
+        display.start()
+
+    options = uc.ChromeOptions()
     options.add_argument("--window-size=1920,1080")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--disable-gpu")
     
-    prefs = {
-        "profile.managed_default_content_settings.images": 2, # 2 = Bloquear
-        "profile.default_content_setting_values.notifications": 2, # Bloquear notificaciones
-        "profile.managed_default_content_settings.stylesheets": 2, # A veces rompe sitios, probar con cuidado (opcional)
-    }
-    options.add_experimental_option("prefs", prefs)
-    options.page_load_strategy = 'eager'
-    
-    driver = webdriver.Chrome(options=options)
+    driver = uc.Chrome(options=options)
     wait = WebDriverWait(driver, 20)
     
     lista_worker_enriquecida = []
@@ -459,21 +457,52 @@ def procesar_lote_worker(id_worker, sublista_propiedades, cancel_event, callback
         # 1. LOGIN
         logger.info(f"🔐 [Worker-{id_worker}] Logueando en HousePricing...")
         if cancel_event.is_set(): 
-            driver.quit(); return []
+            driver.quit()
+            if display: display.stop()
+            return []
 
-        driver.get(LOGIN_URL)
-        logger.debug(f"   ➡️ Navegando a URL de login...")
-        wait.until(EC.presence_of_element_located((By.ID, "id_email"))).send_keys(EMAIL)
-        logger.debug(f"   ➡️ Ingresando correo...")
-        driver.find_element(By.ID, "id_password").send_keys(PASSWORD)
-        logger.debug(f"   ➡️ Ingresando contraseña...")
+        try:
+            driver.get(LOGIN_URL)
+            
+            # Helper local para simular tipeo humano
+            def human_typing(element, text):
+                for char in text:
+                    element.send_keys(char)
+                    time.sleep(random.uniform(0.05, 0.15))
 
-        driver.execute_script("arguments[0].click();", driver.find_element(By.ID, "hp-login-btn"))
-        logger.debug(f"   ➡️ Clickando botón de login...")
-        wait.until(lambda d: "/login" not in d.current_url)
-        logger.success(f"✅ [Worker-{id_worker}] Login exitoso.")
-        logger.debug(f"   ➡️ Esperando que se refrezque la página...")
-        time.sleep(2)
+            wait.until(EC.presence_of_element_located((By.NAME, "email")))
+            time.sleep(random.uniform(1.5, 3.0))
+
+            email_input = driver.find_element(By.NAME, "email")
+            ActionChains(driver).move_to_element(email_input).click().perform()
+            time.sleep(random.uniform(0.2, 0.6))
+            human_typing(email_input, EMAIL)
+
+            time.sleep(random.uniform(0.5, 1.2))
+
+            pass_input = driver.find_element(By.NAME, "password")
+            ActionChains(driver).move_to_element(pass_input).click().perform()
+            time.sleep(random.uniform(0.2, 0.6))
+            human_typing(pass_input, PASSWORD)
+
+            logger.debug(f"   ➡️ [Worker-{id_worker}] Credenciales escritas. Esperando entropía Turnstile...")
+            time.sleep(random.uniform(3.5, 5.0)) 
+            
+            submit_btn = driver.find_element(By.XPATH, "/html/body/section/div/div/section/div/div/div/div[2]/form/div[4]/button")
+            ActionChains(driver).move_to_element(submit_btn).pause(random.uniform(0.5, 1.0)).click().perform()
+
+            wait.until(lambda d: "login" not in d.current_url.lower())
+            logger.success(f"✅ [Worker-{id_worker}] Login exitoso.")
+            time.sleep(2)
+            
+        except Exception as e_login:
+            logger.error(f"❌ [Worker-{id_worker}] Fallo de Login en Selenium: {e_login}")
+            # --- NUEVA SEMÁNTICA: Fallo de Login propaga a toda la sublista ---
+            for item in sublista_propiedades:
+                item["FATAL_ERROR_DATA"] = True
+                item["motivo_error"] = "Fallo de Login: House Pricing rechazó el inicio de sesión o la página de acceso no cargó a tiempo."
+                lista_worker_enriquecida.append(item)
+            return lista_worker_enriquecida
 
         # 2. ITERACIÓN
         for i, item in enumerate(sublista_propiedades):
@@ -562,7 +591,17 @@ def procesar_lote_worker(id_worker, sublista_propiedades, cancel_event, callback
     except Exception as e:
         logger.error(f"💀 [Worker-{id_worker}] Error crítico: {e}", exc_info=True)
     finally:
-        driver.quit()
+        try:
+            driver.quit()
+        except:
+            pass
+            
+        if display:
+            try:
+                display.stop()
+            except:
+                pass
+                
         logger.info(f"👋 [Worker-{id_worker}] Sesión cerrada.")
 
     return lista_worker_enriquecida

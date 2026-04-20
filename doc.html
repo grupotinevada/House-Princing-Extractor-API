@@ -1,433 +1,284 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>House Pricing API - Documentación Técnica</title>
+    <title>House Pricing API - Documentación de Ingeniería Avanzada (v3.0)</title>
     <style>
         :root {
-            --primary: #3b82f6;
-            --bg-dark: #0f172a;
-            --bg-panel: #1e293b;
-            --text-main: #e2e8f0;
-            --text-muted: #94a3b8;
-            --border: #334155;
-            --code-bg: #0d1117;
+            --bg-base: #0d1117;
+            --bg-surface: #161b22;
+            --bg-elevated: #21262d;
+            --text-primary: #c9d1d9;
+            --text-secondary: #8b949e;
+            --accent-blue: #58a6ff;
+            --accent-green: #238636;
+            --accent-orange: #d29922;
+            --accent-red: #f85149;
+            --border-color: #30363d;
+            --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
         }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
         body {
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            background-color: var(--bg-dark);
-            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-base);
+            color: var(--text-primary);
             line-height: 1.6;
             display: flex;
         }
 
-        /* Sidebar Navigation */
+        /* Navegación Lateral */
         nav {
-            width: 260px;
+            width: 300px;
             height: 100vh;
-            background-color: var(--bg-panel);
-            border-right: 1px solid var(--border);
+            background-color: var(--bg-surface);
+            border-right: 1px solid var(--border-color);
             position: fixed;
             overflow-y: auto;
-            padding: 2rem 1rem;
+            padding: 2rem 1.5rem;
         }
+        nav h2 { color: var(--accent-blue); font-size: 1.1rem; margin-bottom: 1.5rem; letter-spacing: 0.5px; text-transform: uppercase; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; }
+        nav ul { list-style: none; }
+        nav li { margin-bottom: 0.5rem; }
+        nav a { color: var(--text-secondary); text-decoration: none; font-size: 0.95rem; display: block; padding: 0.4rem 0.5rem; border-radius: 6px; transition: all 0.2s; }
+        nav a:hover { background-color: var(--bg-elevated); color: var(--text-primary); }
 
-        nav h3 {
-            color: var(--primary);
-            font-size: 1.2rem;
-            margin-bottom: 1.5rem;
-            padding-left: 10px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        nav ul {
-            list-style: none;
-        }
-
-        nav li {
-            margin-bottom: 0.5rem;
-        }
-
-        nav a {
-            display: block;
-            color: var(--text-muted);
-            text-decoration: none;
-            padding: 0.5rem 10px;
-            border-radius: 6px;
-            transition: all 0.2s;
-            font-size: 0.95rem;
-        }
-
-        nav a:hover {
-            background-color: var(--border);
-            color: #fff;
-        }
-
-        /* Main Content */
+        /* Área de Contenido */
         main {
-            margin-left: 260px;
+            margin-left: 300px;
             padding: 3rem 4rem;
+            width: 100%;
             max-width: 1200px;
-            width: 100%;
         }
 
-        h1,
-        h2,
-        h3 {
-            color: #fff;
-            margin-top: 2rem;
-            margin-bottom: 1rem;
-        }
+        h1 { font-size: 2.2rem; margin-bottom: 1rem; color: #fff; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; }
+        h2 { font-size: 1.6rem; margin-top: 3rem; margin-bottom: 1rem; color: var(--accent-blue); }
+        h3 { font-size: 1.2rem; margin-top: 2rem; margin-bottom: 0.8rem; color: #fff; }
+        h4 { font-size: 1.05rem; margin-top: 1.5rem; color: var(--text-secondary); }
+        
+        p { margin-bottom: 1.2rem; }
+        ul, ol { margin-left: 1.5rem; margin-bottom: 1.2rem; }
+        li { margin-bottom: 0.4rem; }
 
-        h1 {
-            font-size: 2.5rem;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 1rem;
-            margin-top: 0;
-        }
-
-        h2 {
-            font-size: 1.8rem;
-            color: var(--primary);
-            margin-top: 3rem;
-        }
-
-        h3 {
-            font-size: 1.3rem;
-            margin-top: 1.5rem;
-        }
-
-        p {
-            margin-bottom: 1rem;
-            color: var(--text-muted);
-        }
-
-        ul {
-            margin-left: 1.5rem;
-            margin-bottom: 1.5rem;
-            color: var(--text-muted);
-        }
-
-        li {
-            margin-bottom: 0.5rem;
-        }
-
-        /* Code Blocks */
+        /* Bloques de Código */
         pre {
-            background-color: var(--code-bg);
-            padding: 1rem;
+            background-color: var(--bg-elevated);
+            padding: 1.2rem;
             border-radius: 8px;
+            border: 1px solid var(--border-color);
             overflow-x: auto;
-            border: 1px solid var(--border);
-            margin-bottom: 1.5rem;
+            margin: 1.5rem 0;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            line-height: 1.4;
         }
+        code { font-family: var(--font-mono); font-size: 0.9em; color: #79c0ff; background: rgba(115, 191, 255, 0.1); padding: 0.2em 0.4em; border-radius: 4px; }
+        pre code { background: transparent; padding: 0; color: inherit; }
 
-        code {
-            font-family: 'Consolas', 'Monaco', monospace;
-            color: #a5d6ff;
-            font-size: 0.9rem;
-        }
+        /* Callouts / Alertas */
+        .callout { padding: 1.2rem 1.5rem; border-radius: 8px; margin: 1.5rem 0; border-left: 4px solid; background-color: var(--bg-surface); }
+        .callout-info { border-left-color: var(--accent-blue); }
+        .callout-warning { border-left-color: var(--accent-orange); }
+        .callout-danger { border-left-color: var(--accent-red); }
+        .callout strong { color: #fff; display: block; margin-bottom: 0.5rem; }
 
-        .inline-code {
-            background-color: rgba(59, 130, 246, 0.1);
-            color: var(--primary);
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-family: monospace;
-        }
+        /* Tablas */
+        table { width: 100%; border-collapse: collapse; margin: 2rem 0; background: var(--bg-surface); border-radius: 8px; overflow: hidden; font-size: 0.9rem; }
+        th, td { padding: 1rem; text-align: left; border: 1px solid var(--border-color); }
+        th { background: var(--bg-elevated); color: var(--accent-blue); font-weight: 600; }
+        tr:nth-child(even) { background-color: rgba(255,255,255,0.02); }
 
-        /* Badges & Tables */
-        .badge {
-            display: inline-block;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 0.8rem;
-            font-weight: bold;
-        }
-
-        .badge-get {
-            background: #059669;
-            color: white;
-        }
-
-        .badge-post {
-            background: #2563eb;
-            color: white;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 2rem;
-            background-color: var(--bg-panel);
+        /* Diagramas (ASCII) */
+        .ascii-diagram {
+            background: var(--bg-elevated);
+            padding: 1.5rem;
             border-radius: 8px;
-            overflow: hidden;
-        }
-
-        th,
-        td {
-            padding: 1rem;
-            text-align: left;
-            border-bottom: 1px solid var(--border);
-        }
-
-        th {
-            background-color: var(--code-bg);
-            color: var(--primary);
-        }
-
-        .note {
-            background-color: rgba(234, 179, 8, 0.1);
-            border-left: 4px solid #eab308;
-            padding: 1rem;
-            margin-bottom: 1.5rem;
-            color: #e2e8f0;
-        }
-
-        /* Diagrams */
-        .diagram {
-            background: var(--bg-panel);
-            padding: 2rem;
-            border-radius: 8px;
-            text-align: center;
-            font-family: monospace;
-            margin-bottom: 2rem;
+            font-family: var(--font-mono);
             white-space: pre;
             overflow-x: auto;
-            color: #fff;
+            color: var(--accent-green);
+            line-height: 1.2;
+            border: 1px solid var(--border-color);
+            margin: 2rem 0;
+            font-size: 0.8rem;
         }
     </style>
 </head>
-
 <body>
 
-    <nav>
-        <h3>House Pricing API</h3>
+<nav>
+    <h2>HOUSE PRICING API</h2>
+    <ul>
+        <li><a href="#arquitectura-sistema">1. Arquitectura del Sistema</a></li>
+        <li><a href="#patrones-concurrencia">2. Patrones de Concurrencia</a></li>
+        <li><a href="#estrategia-evasion">3. Estrategia de Evasión (WAF)</a></li>
+        <li><a href="#pipeline-ejecucion">4. Pipeline de Ejecución Deep-Dive</a></li>
+        <li><a href="#modelo-datos">5. Modelo de Datos y ETL</a></li>
+        <li><a href="#gestion-estado">6. Gestión de Estado (API)</a></li>
+        <li><a href="#despliegue-infra">7. Infraestructura y Despliegue</a></li>
+    </ul>
+</nav>
+
+<main>
+    <h1>Documentación de Ingeniería Avanzada</h1>
+    <p>La <strong>House Pricing Extractor API</strong> es un motor de procesamiento asíncrono diseñado para la orquestación de flujos de Web Scraping complejos, evasión de Web Application Firewalls (WAF) y consolidación de datos ETL (Extract, Transform, Load).</p>
+
+    <section id="arquitectura-sistema">
+        <h2>1. Arquitectura del Sistema</h2>
+        <p>El sistema implementa un patrón <strong>Arquitectura Hexagonal (Puertos y Adaptadores)</strong> adaptado para tareas asíncronas de larga duración.</p>
+
+        <div class="ascii-diagram">
++----------------------+       +-----------------------------------------+       +------------------------+
+|      Capa Web        |       |            Capa de Aplicación           |       |   Capa de Infra / BD   |
+|     (FastAPI)        |       |               (Pipeline)                |       |                        |
+|                      |       |  +---------+   +--------+   +--------+  |       |   +----------------+   |
+| [POST /upload] ----> | --->  |  | Paso 0  |-->| Paso 1 |-->| Paso 2 |  | ----> |   | MySQL Server   |   |
+|                      |       |  | (Auth)  |   | (Parse)|   | (Scrap)|  |       |   | (Transaccional)|   |
+| [GET /status]  <---- | <---  |  +---------+   +--------+   +--------+  |       |   +----------------+   |
+|                      |       |        |            |            |      |       |                        |
++----------------------+       |        v            v            v      |       +------------------------+
+                               |    [ Eventos de Progreso Compartido ]   |
+                               +-----------------------------------------+
+        </div>
+
+        <h3>Decisiones de Diseño Clave:</h3>
         <ul>
-            <li><a href="#intro">1. Introducción</a></li>
-            <li><a href="#architecture">2. Arquitectura</a></li>
-            <li><a href="#structure">3. Estructura de Archivos</a></li>
-            <li><a href="#prerequisites">4. Requisitos Linux</a></li>
-            <li><a href="#installation">5. Instalación</a></li>
-            <li><a href="#pipeline">6. Pipeline de Lógica</a></li>
-            <li><a href="#api-ref">7. Referencia API</a></li>
-            <li><a href="#frontend">8. Integración PHP</a></li>
+            <li><strong>Desacoplamiento de la petición HTTP:</strong> Las peticiones de subida (<code>/upload-process</code>) responden inmediatamente con un <code>task_id</code> (UUID). La lógica pesada se delega a <code>BackgroundTasks</code> de FastAPI.</li>
+            <li><strong>Inmutabilidad del Pipeline:</strong> Cada "Paso" recibe datos estructurales (JSON/Dict) y retorna un estado modificado, operando como funciones puras siempre que es posible para facilitar el <em>testing</em> y aislar fallos.</li>
         </ul>
-    </nav>
+    </section>
 
-    <main>
-        <section id="intro">
-            <h1>Documentación Técnica</h1>
-            <p>
-                <strong>House Pricing Automation API</strong> es una solución desacoplada diseñada para procesar
-                masivamente tasaciones inmobiliarias.
-                Separa la interfaz de usuario (PHP) del procesamiento pesado (Python/Selenium) para evitar
-                <em>timeouts</em> y problemas de concurrencia.
-            </p>
-            <p>
-                El sistema permite subir un Excel con roles y comunas, y devuelve un reporte enriquecido con datos de
-                "Informe de Antecedentes" (PDF OCR) y comparables de mercado (Web Scraping).
-            </p>
-        </section>
+    <section id="patrones-concurrencia">
+        <h2>2. Patrones de Concurrencia y Paralelismo</h2>
+        <p>El sistema procesa lotes (batches) de propiedades utilizando paralelismo para reducir los tiempos de I/O (descargas y navegación web).</p>
 
-        <section id="architecture">
-            <h2>2. Arquitectura del Sistema</h2>
-            <p>El sistema sigue un patrón <strong>Cliente-Servidor Asíncrono</strong> con gestión de estado en memoria.
-            </p>
+        <h3>Implementación: <code>ThreadPoolExecutor</code></h3>
+        <p>Tanto en el <strong>Paso 0</strong> (Descargas vía <code>requests</code>) como en el <strong>Paso 2</strong> (Navegación vía Selenium), se utiliza <code>concurrent.futures.ThreadPoolExecutor</code>. Se descartó <code>asyncio</code> en el core del scraping debido a la naturaleza síncrona y bloqueante de <code>undetected_chromedriver</code> y las librerías de parseo de PDF.</p>
 
-            <div class="diagram">
-                +----------------+ +--------------------+ +-------------------------+
-                | CLIENTE (PHP) | ---> | API (FastAPI) | ---> | WORKER (Lógica) |
-                | (Interfaz UI) | <--- | (Gestor de Cola) | <--- | (Selenium/PDF/Pandas) | +----------------+
-                    +--------------------+ +-------------------------+ | | | 1. Sube Archivo 2. Genera UUID Task 3.
-                    Ejecuta Paso 0 4. Polling Estado <------ 5. Lee Estado Memoria 6. Callbacks Progreso 7. Descarga
-                    Final 8. Sirve Archivo 9. Genera Excel </div>
+        <pre><code># Ejemplo conceptual de partición de carga (Chunking)
+WORKERS = 5
+chunk_size = math.ceil(total_propiedades / WORKERS)
+chunks = [lista_propiedades[i:i + chunk_size] for i in range(0, total, chunk_size)]
 
-                    <ul>
-                        <li><strong>PHP (Frontend):</strong> Solo maneja la UI y peticiones HTTP. No procesa datos.</li>
-                        <li><strong>FastAPI (Backend):</strong> Orquestador. Recibe archivos y lanza hilos en
-                            <code>BackgroundTasks</code>.</li>
-                        <li><strong>Pipeline (Core):</strong> Scripts de Python puros que ejecutan la lógica de negocio
-                            "sagrada".</li>
-                    </ul>
-        </section>
+with ThreadPoolExecutor(max_workers=WORKERS) as executor:
+    futures = [executor.submit(worker_function, id, chunk, cancel_event) for chunk in chunks]
+    for future in as_completed(futures):
+        resultados.extend(future.result())</code></pre>
 
-        <section id="structure">
-            <h2>3. Estructura de Archivos</h2>
-            <pre><code>/proyecto_root/
-│
-├── server.py              # Entry Point de la API (Uvicorn)
-├── requirements.txt       # Dependencias de Python
-├── .env                   # Variables de entorno (Credenciales)
-├── logger.py              # Configuración de Logs rotativos
-│
-├── api/                   # Módulo de Lógica de Negocio
-│   ├── __init__.py        # Permite importar la carpeta como paquete
-│   ├── main_hp.py         # Orquestador del Pipeline (Llama a los Pasos)
-│   ├── paso0_hp.py        # Descargas (Selenium)
-│   ├── paso1_hp.py        # Extracción PDF (OCR/Text)
-│   ├── paso2_hp.py        # Comparables (Selenium Heavy)
-│   └── paso3_hp.py        # Generación Excel (Pandas)
-│
-├── uploads/               # Input temporal (Archivos subidos)
-├── house_pricing_outputs/ # Output final (Excels generados)
-└── logs/                  # Logs del sistema</code></pre>
-        </section>
+        <div class="callout callout-warning">
+            <strong>Precaución de Recursos (Thread Safety):</strong> En el Paso 2, al levantar 5 instancias de Chromium simultáneas, el consumo de RAM puede escalar a ~2.5GB. El servidor debe ser dimensionado en consecuencia. Las devoluciones de llamadas (<code>callbacks</code>) de progreso utilizan <code>threading.Lock()</code> para prevenir condiciones de carrera al actualizar variables globales de estado.
+        </div>
+    </section>
 
-        <section id="prerequisites">
-            <h2>4. Requisitos del Servidor (Linux)</h2>
-            <p>El sistema está optimizado para <strong>Ubuntu 20.04+</strong> o <strong>Fedora 38+</strong>.</p>
+    <section id="estrategia-evasion">
+        <h2>3. Estrategia de Evasión (WAF Bypass)</h2>
+        <p>El sistema se enfrenta a **Cloudflare Turnstile**, una protección diseñada para bloquear tráfico automatizado evaluando la huella digital del navegador (TLS/JA3) y la biometría de interacción.</p>
 
-            <h3>Componentes Base</h3>
-            <ul>
-                <li><strong>Python 3.10+</strong></li>
-                <li><strong>Google Chrome Stable:</strong> Necesario para Selenium.</li>
-                <li><strong>Permisos:</strong> El usuario que ejecute el script debe poder crear carpetas.</li>
-            </ul>
+        <h3>El Patrón "Abrepuertas" (Paso 0)</h3>
+        <ol>
+            <li><strong>Ejecución con Monitor Virtual (Xvfb):</strong> Cloudflare penaliza severamente la bandera <code>--headless</code>. Para correr en un servidor Linux, se utiliza <code>pyvirtualdisplay</code>. Esto engaña al WAF haciéndole creer que existe hardware de renderizado conectado (GPU/Display).</li>
+            <li><strong>Parcheo de Driver:</strong> Se utiliza <code>undetected_chromedriver</code>, el cual recompila el binario subyacente de <code>chromedriver</code> para eliminar variables clave (como <code>navigator.webdriver = true</code>).</li>
+            <li><strong>Inyección Biométrica:</strong> Para superar el análisis heurístico, el login no se inyecta por JavaScript ni con <code>send_keys()</code> instantáneo. Se utiliza <code>ActionChains</code> para trazar rutas de mouse y un bucle de retraso aleatorio inter-tecla (50-150ms) simulando latencia humana.</li>
+            <li><strong>Transferencia de Sesión (Handoff):</strong> Una vez Cloudflare emite las cookies de validación (<code>sessionid</code> y <code>csrftoken</code>), la instancia pesada de Selenium se destruye. Las cookies se inyectan en sesiones ultraligeras de <code>requests.Session()</code> que realizan el trabajo de descarga a máxima velocidad sin ser re-evaluadas por el WAF.</li>
+        </ol>
+    </section>
 
-            <div class="note">
-                <strong>Nota sobre Drivers:</strong> No es necesario descargar <code>chromedriver</code> manualmente.
-                Selenium 4.10+ usa <em>Selenium Manager</em> para descargarlo automáticamente según la versión de Chrome
-                instalada.
-            </div>
-        </section>
+    <section id="pipeline-ejecucion">
+        <h2>4. Pipeline de Ejecución Deep-Dive</h2>
 
-        <section id="installation">
-            <h2>5. Guía de Instalación</h2>
+        <h3>Paso 1: Extracción Semántica Dual (HTML vs PDF)</h3>
+        <p>Implementa un patrón de degradación elegante (<em>Graceful Fallback</em>).</p>
+        <ul>
+            <li><strong>El Motor Principal (DOM Parsing):</strong> <code>paso1_html_hp.py</code>. Utiliza <code>BeautifulSoup</code>. Es determinista (O(n) de lectura de árbol). Localiza nodos por IDs específicos (<code>#section-resumen</code>). Costo computacional: Marginal.</li>
+            <li><strong>El Motor Fallback (Análisis Espacial OCR):</strong> <code>paso1_pdf_hp.py</code>. Si el HTML cambia su estructura o no está disponible, se utiliza <code>pdfplumber</code>. Este motor no lee texto plano, sino que calcula distancias euclidianas (Eje Y/X) entre los bounding boxes de las palabras ("N°", "Material") para reconstruir tablas complejas que se rompen en multilínea. Identifica hipervínculos midiendo la proximidad de la capa de anotación URI a los números de rol.</li>
+        </ul>
 
-            <h3>Paso 1: Instalar Google Chrome</h3>
-            <pre><code># Ubuntu / Debian
-wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-sudo apt install ./google-chrome-stable_current_amd64.deb
+        <h3>Paso 3: Generación Estructural de Reportes</h3>
+        <p>Transforma un JSON anidado en un modelo relacional plano mediante <code>pandas</code>. Utiliza <code>openpyxl</code> para manipular el DOM del archivo <code>.xlsx</code> resultante, inyectando estilos de cabecera y formateando cadenas de texto que comiencen con <code>http</code> como hipervínculos clickeables.</p>
+    </section>
 
-# Fedora / CentOS
-sudo dnf install google-chrome-stable</code></pre>
+    <section id="modelo-datos">
+        <h2>5. Modelo de Datos e Inyección ETL (Paso 4)</h2>
+        <p>El módulo <code>paso4_hp.py</code> actúa como un servicio ETL para poblar el Data Warehouse de la aplicación.</p>
 
-            <h3>Paso 2: Configurar Entorno Python</h3>
-            <pre><code># Clonar o copiar archivos
-cd /ruta/a/tu/proyecto
+        <h3>Estrategia Transaccional</h3>
+        <p>Para asegurar el principio ACID (Atomicidad, Consistencia, Aislamiento, Durabilidad), toda la inyección de una propiedad se realiza bajo una única transacción de base de datos.</p>
+        <pre><code>try:
+    conn.start_transaction()
+    # 1. Insert/Update Tabla Principal
+    # 2. Insert Tablas Relacionales (Deudas, Roles, Construcciones)
+    conn.commit()
+except mysql.connector.Error as err:
+    conn.rollback() # Si falla la línea 2, se deshace la línea 1
+    manejar_error(err)</code></pre>
 
-# Crear entorno virtual (Recomendado)
-python3 -m venv venv
-source venv/bin/activate
+        <h3>Manejo de Conflictos (Upserts)</h3>
+        <p>Para evitar colisiones de llaves primarias o índices únicos (ej. El número de Rol), se utiliza el paradigma <code>ON DUPLICATE KEY UPDATE</code> de MySQL, lo que permite que el scraper actualice registros antiguos si se vuelve a procesar una propiedad existente, sin generar errores 1062.</p>
+    </section>
 
-# Instalar dependencias
-pip install -r requirements.txt</code></pre>
+    <section id="gestion-estado">
+        <h2>6. Gestión de Estado y Señales IPC (API)</h2>
+        <p>La API (FastAPI) debe rastrear procesos que corren en hilos separados. Esto se logra mediante el diccionario global <code>TASKS</code>.</p>
 
-            <h3>Paso 3: Ejecutar la API</h3>
-            <pre><code># Ejecución directa (Desarrollo)
-python server.py
+        <table style="margin-top: 1rem;">
+            <tr>
+                <th>Atributo</th>
+                <th>Tipo</th>
+                <th>Propósito</th>
+            </tr>
+            <tr>
+                <td><code>status</code></td>
+                <td>String</td>
+                <td>Máquina de estados: <code>processing</code>, <code>completed</code>, <code>failed</code>, <code>cancelled</code>.</td>
+            </tr>
+            <tr>
+                <td><code>progress</code></td>
+                <td>Integer</td>
+                <td>Porcentaje (0-100) actualizado mediante <em>callbacks</em> inyectados en las funciones de los workers.</td>
+            </tr>
+            <tr>
+                <td><code>cancel_event</code></td>
+                <td>threading.Event()</td>
+                <td>Primitiva de sincronización (IPC). Cuando el usuario envía una petición de cancelación, se invoca <code>event.set()</code>. Los loops internos en los Pasos 0, 1, 2 y 3 revisan <code>if event.is_set(): break</code> en cada iteración, permitiendo un cierre elegante sin matar el proceso a la fuerza.</td>
+            </tr>
+            <tr>
+                <td><code>file_path</code></td>
+                <td>String</td>
+                <td>Referencia al archivo generado en disco para su posterior descarga (FileResponse).</td>
+            </tr>
+        </table>
+    </section>
 
-# Ejecución Producción (Segundo plano)
-nohup python server.py > /dev/null 2>&1 &</code></pre>
-            <p>La API iniciará en el puerto <strong>3000</strong>.</p>
-        </section>
+    <section id="despliegue-infra">
+        <h2>7. Infraestructura y Despliegue (Production Readiness)</h2>
+        
+        <h3>Script de Inicialización (Systemd)</h3>
+        <p>Para entornos de producción (Ubuntu/Debian), el servidor Uvicorn (FastAPI) nunca debe ejecutarse directamente en la terminal. Se debe crear un servicio systemd para garantizar el reinicio automático ante caídas.</p>
+        
+        <pre><code># /etc/systemd/system/housepricing-api.service
+[Unit]
+Description=House Pricing FastAPI Engine
+After=network.target
 
-        <section id="pipeline">
-            <h2>6. Pipeline de Lógica (Core)</h2>
-            <p>El núcleo del sistema reside en la carpeta <code>api/</code>. La lógica original se mantiene intacta,
-                pero se le han inyectado <strong>callbacks</strong> para reportar progreso.</p>
+[Service]
+User=tu_usuario
+Group=www-data
+WorkingDirectory=/var/www/house-pricing-api
+Environment="PATH=/var/www/house-pricing-api/env/bin"
+# Ejecución vía Uvicorn (Recomendado sobre python server.py)
+ExecStart=/var/www/house-pricing-api/env/bin/uvicorn server:app --host 0.0.0.0 --port 3000 --workers 1
+Restart=always
 
-            <ul>
-                <li>
-                    <strong>Paso 0 (Descargas):</strong>
-                    Usa Selenium para descargar PDFs desde el portal de antecedentes.
-                    <br><em>Clave:</em> Manejo robusto de reintentos al mover archivos descargados.
-                </li>
-                <li>
-                    <strong>Paso 1 (PDF Parsing):</strong>
-                    Usa <code>pdfplumber</code>. Extrae roles, avaluos y coordenadas espaciales de los hipervínculos del
-                    PDF.
-                </li>
-                <li>
-                    <strong>Paso 2 (Enriquecimiento):</strong>
-                    La etapa más pesada. Usa <code>ThreadPoolExecutor</code> y Selenium para buscar comparables en
-                    HousePricing.
-                    <br><em>Importante:</em> Implementa un contador de progreso <code>thread-safe</code>.
-                </li>
-                <li>
-                    <strong>Paso 3 (Reporte):</strong>
-                    Cruza toda la data (JSON) y genera un Excel con 5 hojas relacionales. Usa <code>openpyxl</code> para
-                    formateo.
-                </li>
-            </ul>
-        </section>
+[Install]
+WantedBy=multi-user.target</code></pre>
 
-        <section id="api-ref">
-            <h2>7. Referencia de API</h2>
-            <p>Endpoints disponibles en <code>http://TU_IP:3000</code>.</p>
+        <h3>Monitor de Salud (Garbage Collection)</h3>
+        <p>Las herramientas de <em>Headless Browsing</em> son notorias por crear fugas de memoria (Memory Leaks). Si un worker falla catastróficamente y no alcanza el bloque <code>finally: driver.quit()</code>, el proceso <code>chrome</code> queda "zombie". El script <code>utils.py</code> lee el árbol de procesos del sistema operativo (vía <code>psutil</code>) buscando procesos huérfanos asociados al PID padre para registrarlos en los logs y alertar sobre la necesidad de reciclaje del servidor.</p>
+    </section>
 
-            <table>
-                <thead>
-                    <tr>
-                        <th>Método</th>
-                        <th>Endpoint</th>
-                        <th>Descripción</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><span class="badge badge-get">GET</span></td>
-                        <td><code>/health</code></td>
-                        <td>Verifica que el sistema esté operativo.</td>
-                    </tr>
-                    <tr>
-                        <td><span class="badge badge-post">POST</span></td>
-                        <td><code>/upload-process</code></td>
-                        <td>
-                            Sube archivo Input. Retorna <code>{"task_id": "uuid"}</code>.
-                            <br><small>Param: file (Binary)</small>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td><span class="badge badge-get">GET</span></td>
-                        <td><code>/status/{task_id}</code></td>
-                        <td>
-                            Polling de estado. Retorna <code>progress</code> (0-100) y <code>status</code>.
-                        </td>
-                    </tr>
-                    <tr>
-                        <td><span class="badge badge-post">POST</span></td>
-                        <td><code>/cancel/{task_id}</code></td>
-                        <td>Envía señal de interrupción (Event Set) al proceso.</td>
-                    </tr>
-                    <tr>
-                        <td><span class="badge badge-get">GET</span></td>
-                        <td><code>/download/{task_id}</code></td>
-                        <td>Descarga el Excel final (Solo si status == "completed").</td>
-                    </tr>
-                </tbody>
-            </table>
-        </section>
-
-        <section id="frontend">
-            <h2>8. Integración Frontend (PHP)</h2>
-            <p>El archivo <code>index.php</code> contiene la lógica de cliente. Como la arquitectura separa el servidor
-                Web del servidor de Procesamiento, se debe configurar la IP manualmente.</p>
-
-            <h3>Configuración Crítica</h3>
-            <p>Editar la línea dentro del bloque <code>&lt;script&gt;</code> en <code>index.php</code>:</p>
-            <pre><code>// index.php
-
-// REEMPLAZAR con la IP real donde corre server.py
-const API_URL = "http://192.168.1.50:3000"; 
-
-// NO usar 'localhost' si el PHP y Python están en servidores distintos
-// o si se accede desde otra máquina de la red.</code></pre>
-        </section>
-
-    </main>
+</main>
 
 </body>
-
 </html>

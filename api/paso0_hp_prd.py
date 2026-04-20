@@ -1,30 +1,28 @@
 import os
 import time
-import pandas as pd
-import glob
-import shutil
+import json
+import re
 import math
+import random
+import pandas as pd
+import requests
+from bs4 import BeautifulSoup
 from typing import List, Dict, Any, Optional
 from concurrent.futures import ThreadPoolExecutor
-
-# --- DEPENDENCIAS PARA EL ABREPUERTAS ---
-import undetected_chromedriver as uc
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.action_chains import ActionChains
-from pyvirtualdisplay import Display
-# -----------------------------------------------
+from pasotasacion import obtener_tasacion
 
 from dotenv import load_dotenv
 from logger import get_logger
 
-# # Configuración
+# Configuración
 logger = get_logger("paso0_hp", log_dir="logs", log_file="paso0.log")
 load_dotenv()
 
 OUTPUT_FOLDER = os.path.abspath("./input_pdfs")
-URL_LOGIN = os.getenv("LOGIN_URL")
+
+# Variables de entorno originales y necesarias para Requests
+URL_BASE = "https://www.housepricing.cl"
+URL_LOGIN = os.getenv("LOGIN_URL") or f"{URL_BASE}/login/"
 URL_ANTECEDENTES = os.getenv("URL_ANTECEDENTES")
 URL_TASACIONES = os.getenv("URL_TASACIONES")
 EMAIL_HP = os.getenv("USUARIO_HP")
@@ -39,11 +37,10 @@ WORKERS = 5
 
 if not URL_ANTECEDENTES or not URL_LOGIN:
     logger.error("❌ ERROR CRÍTICO: No se cargaron las URL del archivo .env")
-    logger.error(f"   URL_ANTECEDENTES: {URL_ANTECEDENTES}")
-    logger.error(f"   URL_LOGIN: {URL_LOGIN}")
     raise ValueError("Faltan variables de entorno en el archivo .env")
+
 # ==============================================================================
-# 1. CARGA DE DATOS (IGUAL AL ORIGINAL)
+# 1. CARGA DE DATOS (INTACTO)
 # ==============================================================================
 def detectar_y_cargar(ruta_archivo: str) -> Optional[List[Dict[str, Any]]]:
     logger.info(f"📂 Intentando cargar archivo origen: {ruta_archivo}")
@@ -77,7 +74,6 @@ def estandarizar_data(lista_cruda: List[Dict[str, Any]]) -> List[Dict[str, Any]]
         r = str(item.get("rol", "")).strip()
         c = str(item.get("comuna", "")).strip()
         if len(r) > 3 and len(c) > 3:
-            
             if r not in roles_vistos:
                 lista_limpia.append({"rol": r, "comuna": c})
                 roles_vistos.add(r)
@@ -90,7 +86,7 @@ def estandarizar_data(lista_cruda: List[Dict[str, Any]]) -> List[Dict[str, Any]]
     return lista_limpia
 
 # ==============================================================================
-# 2 y 3. LÓGICA DE DESCARGA VIA REQUESTS (REEMPLAZO SELENIUM)
+# 2 y 3. LÓGICA DE DESCARGA VIA REQUESTS 
 # ==============================================================================
 class HousePricingClient:
     def __init__(self, worker_id="N/A"):
@@ -385,14 +381,13 @@ def procesar_lote_worker(id_worker, sublista_propiedades, cancel_event):
                         motivo_fallo = str(error_reintento)
             
             if not exito_item:
+                # Si falló después de todos los intentos, le asigna el último error real capturado
                 if 'motivo_error' not in item:
-                    item['motivo_error'] = "Error Descarga/Timeout" # Etiqueta genérica
+                    item['motivo_error'] = motivo_fallo
                 fallidos.append(item)
                 
-    finally:
-        driver.quit()
-        try: shutil.rmtree(carpeta_worker)
-        except: pass
+    except Exception as e:
+        logger.error(f"Error crítico en Worker-{id_worker}: {e}")
     
     return exitos, fallidos
 
@@ -405,15 +400,6 @@ def orquestador_descargas(lista_propiedades, cancel_event, callback_progreso=Non
     total = len(lista_propiedades)
     logger.info(f"🚀 Iniciando ciclo de descargas PARALELO para {total} propiedades. WORKERS={WORKERS}")
 
-    cookies_auth = obtener_cookies_selenium(EMAIL_HP, PASS_HP)
-    if not cookies_auth or "sessionid" not in cookies_auth:
-        logger.error("❌ Fallo crítico: No se pudieron obtener las cookies de sesión con Selenium.")
-        fallidos = []
-        for p in lista_propiedades:
-            p['motivo_error'] = "Fallo de Login: Cloudflare bloqueó el acceso inicial (Turnstile)."
-            fallidos.append(p)
-        return 0, fallidos
-
     chunk_size = math.ceil(total / WORKERS)
     chunks = [lista_propiedades[i:i + chunk_size] for i in range(0, total, chunk_size)]
     
@@ -424,7 +410,7 @@ def orquestador_descargas(lista_propiedades, cancel_event, callback_progreso=Non
     with ThreadPoolExecutor(max_workers=WORKERS) as executor:
         futures = []
         for i, chunk in enumerate(chunks):
-            futures.append(executor.submit(procesar_lote_worker, i+1, chunk, cancel_event, cookies_auth))
+            futures.append(executor.submit(procesar_lote_worker, i+1, chunk, cancel_event))
         
         for future in futures:
             try:
@@ -457,9 +443,8 @@ def orquestador_descargas(lista_propiedades, cancel_event, callback_progreso=Non
     return total_exitos, total_fallidos
 
 # ==============================================================================
-# ENTRY POINT
+# ENTRY POINT (INTACTO)
 # ==============================================================================
-# Modificación: Agregar callback_progreso=None
 def ejecutar(ruta_archivo: str, cancel_event, callback_progreso=None) -> bool:
     logger.info(f"=== PASO 0: INICIO DEL FLUJO DE DESCARGAS ===")
     logger.info(f"📂 Archivo de entrada: {ruta_archivo}")
@@ -474,47 +459,4 @@ def ejecutar(ruta_archivo: str, cancel_event, callback_progreso=None) -> bool:
         logger.error("❌ No hay datos válidos después de la limpieza. Abortando.")
         return 0, []
         
-    # Pasamos el callback al orquestador
     return orquestador_descargas(clean, cancel_event, callback_progreso=callback_progreso)
-
-
-
-# if __name__ == "__main__":
-#     import threading
-
-#     import sys
-#     import os
-#     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-#     from logger import get_logger
-
-
-#     # Configuración
-#     logger = get_logger("paso0_hp", log_dir="logs", log_file="paso0.log")
-    
-#     # 1. Definir archivo de entrada para la prueba
-#     # Asegúrate de que este archivo exista en la raíz o ajusta la ruta
-#     ARCHIVO_INPUT_TEST = "propiedades.csv" 
-    
-#     # 2. Crear el evento de cancelación (necesario por la firma de la función)
-#     cancel_token = threading.Event()
-
-#     # 3. Callback simple para visualizar progreso en consola
-#     def reporte_progreso(procesados, total):
-#         porcentaje = int((procesados / total) * 100) if total > 0 else 0
-#         print(f"   📊 [Callback] Progreso: {procesados}/{total} ({porcentaje}%)")
-
-#     print(f"🧪 MODO PRUEBA: Ejecutando solo Paso 0 con '{ARCHIVO_INPUT_TEST}'")
-    
-#     if os.path.exists(ARCHIVO_INPUT_TEST):
-#         inicio = time.time()
-        
-#         # Ejecutamos
-#         exitos, fallidos = ejecutar(ARCHIVO_INPUT_TEST, cancel_token, callback_progreso=reporte_progreso)
-        
-#         fin = time.time()
-#         print(f"\n⏱️ Tiempo total: {round(fin - inicio, 2)} segundos")
-#         print(f"✅ Éxitos: {exitos}")
-#         print(f"❌ Fallidos: {len(fallidos)}")
-#     else:
-#         logger.error(f"❌ No se encontró el archivo '{ARCHIVO_INPUT_TEST}' para la prueba.")
-#         print(f"⚠️ Crea un archivo llamado '{ARCHIVO_INPUT_TEST}' en la carpeta del script o edita la variable en el bloque if __name__.")
