@@ -193,6 +193,19 @@ def ejecutar_proceso_background(task_id: str, file_path: str, cancel_event: thre
             if porcentaje == 0 or porcentaje == 25 or porcentaje == 50 or porcentaje == 75 or porcentaje == 100:
                 logger.info(f"📊 Task {task_id}: {porcentaje}% - {mensaje}")
 
+    def partial_error_callback_api(rol: str, paso: str, motivo: str):
+        if task_id in tasks:
+            # Aseguramos que la lista exista (aunque FastAPI la inicializa por defecto)
+            if "errores_parciales" not in tasks[task_id]:
+                tasks[task_id]["errores_parciales"] = []
+            
+            tasks[task_id]["errores_parciales"].append({
+                "rol": rol,
+                "paso": paso,
+                "motivo": motivo
+            })
+            logger.warning(f"⚠️ [API] Error parcial registrado para Rol {rol}: {motivo}")
+
     # === INICIO DEL SISTEMA DE COLA ===
     # El hilo se detendrá aquí si hay otro proceso ejecutándose
     with SEMAFORO_PROCESAMIENTO:
@@ -218,7 +231,8 @@ def ejecutar_proceso_background(task_id: str, file_path: str, cancel_event: thre
             exito = main_hp.main(
                 cancel_event=cancel_event,
                 ruta_lista=file_path,
-                progress_callback=progress_callback_api
+                progress_callback=progress_callback_api,
+                partial_error_callback=partial_error_callback_api
             )
             
             # Verificación Post-Ejecución

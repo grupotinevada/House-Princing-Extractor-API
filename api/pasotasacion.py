@@ -89,7 +89,8 @@ def obtener_tasacion(session, match_data, csrf_token, url_base="https://www.hous
         "tasa_vta_clp": 0,
         "tasa_vta_uf": "0", 
         "tasa_arr_clp": 0,
-        "tasa_arr_uf": "0" 
+        "tasa_arr_uf": "0",
+        "motivo_error": None  # <--- NUEVA LLAVE AÑADIDA
     }
 
     url_tasacion_resultado = f"{url_base}/tasacion-resultado/"
@@ -186,7 +187,8 @@ def obtener_tasacion(session, match_data, csrf_token, url_base="https://www.hous
                     mensaje_error = " ".join(alerta_error.stripped_strings)
                 
                 logger.warning(f"      ⚠️ [Worker-{worker_id}] Tasación rechazada por datos inválidos. Razón de HP: '{mensaje_error}'")
-                continue
+                data_result["motivo_error"] = mensaje_error  # <--- INYECCIÓN DEL MOTIVO PARA LA API
+                break
             
             if not response_data.get("success") or "redirect" not in response_data:
                 logger.warning(f"      ⚠️ [Worker-{worker_id}] La plataforma no devolvió un enlace válido para ver la tasación calculada.")

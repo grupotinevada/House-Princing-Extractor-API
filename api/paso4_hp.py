@@ -83,6 +83,28 @@ def limpiar_int(valor: Any) -> int:
     except:
         return 0
 
+def limpiar_SI(texto: Any) -> Any:
+    """Convierte a int, retorna None si es 'S/I' o inválido."""
+    if not texto or str(texto).strip() in ["", "S/I", "Sin dato", "None", "-"]:
+        return None
+    try:
+        clean = re.sub(r'[^\d]', '', str(texto))
+        return int(clean) if clean else None
+    except ValueError:
+        return None
+
+
+def limpiar_anio_mysql(valor: Any) -> Any:
+    """Convierte a entero para BD. Si viene la etiqueta de error o vacío, retorna None (NULL)."""
+    if not valor or str(valor).strip() == "Sin datos desde hp" or str(valor).strip() == "None":
+        return None
+    try:
+        # Extrae solo los números por si viene algo como "2021." o espacios
+        s = re.sub(r'[^\d]', '', str(valor))
+        return int(s) if s else None
+    except:
+        return None
+
 # ==============================================================================
 #  LÓGICA PRINCIPAL
 # ==============================================================================
@@ -105,7 +127,9 @@ def insertar_datos(lista_datos: List[Dict[str, Any]], cancel_event, callback_pro
     logger.info("💾 PASO 4: Iniciando inyección a Base de Datos...")
     
     conn = get_db_connection()
-    if not conn: return False
+    # --- NUEVA SEMÁNTICA: Validación de Conexión Inicial ---
+    if not conn: 
+        raise Exception("Fallo Crítico: No se pudo establecer conexión con la Base de Datos. Verifique las credenciales o el estado del servidor MySQL.")
 
     cursor = conn.cursor()
     total = len(lista_datos)
@@ -164,14 +188,14 @@ def insertar_datos(lista_datos: List[Dict[str, Any]], cancel_event, callback_pro
                 limpiar_decimal_chile(carac.get("M2 Terreno")),
                 avaluo.get("Avalúo Total"), avaluo.get("Avalúo Exento"), 
                 avaluo.get("Avalúo Afecto"), avaluo.get("Contribuciones Semestrales"),
-                cbr.get("Foja"), cbr.get("Número"), cbr.get("Año"), 
+                limpiar_SI(cbr.get("Foja")), limpiar_SI(cbr.get("Número")), limpiar_anio_mysql(cbr.get("Año")),
                 fecha_tx_clean,
                 monto_tx_clean, 
                 vend_str, comp_str, meta.get("nombre"),
                 meta.get("link_informe"), 
 
                 item.get("tasa_vta_clp", 0),
-                limpiar_precio_uf(item.get("tasa_vta_uf", "0")), # Limpia el punto de miles (4.638 -> 4638.0)
+                limpiar_precio_uf(item.get("tasa_vta_uf", "0")), 
                 item.get("tasa_arr_clp", 0),
                 limpiar_precio_uf(item.get("tasa_arr_uf", "0"))
             )
@@ -234,54 +258,88 @@ def insertar_datos(lista_datos: List[Dict[str, Any]], cancel_event, callback_pro
             hp_data = item.get("house_pricing", {})
             raw_comps = hp_data.get("comparables") 
             
+            insertar_placeholder = False
+            
             if raw_comps is None:
                 logger.warning(f"     ⚠️ [DEBUG] No existe la llave 'comparables' para la propiedad {uid}")
+                insertar_placeholder = True
             elif isinstance(raw_comps, str):
                 logger.warning(f"     ⚠️ [DEBUG] 'comparables' es un texto (posible error de scraping): {raw_comps}")
+                insertar_placeholder = True
             elif isinstance(raw_comps, list):
                 if len(raw_comps) == 0:
                     logger.warning(f"     ⚠️ [DEBUG] La lista de comparables está vacía [] para {uid}")
-                else:
-                    logger.info(f"     👀 [DEBUG] Se encontraron {len(raw_comps)} comparables. Insertando...")
-                    
-                    for i, comp in enumerate(raw_comps):
-
-                        logger.debug("REVISANDO FECHAS DE LOS COMPARABLES TRANSACCION Y PUBLICACION")
-                        logger.debug(f"     🔍 Fecha Publicación antes : {comp.get('fecha_publicacion')} | despues -> {convertir_fecha_mysql(comp.get('fecha_publicacion'))}")
-                        logger.debug(f"     🔍 Fecha Transacción antes : {comp.get('fecha_transaccion')} | despues -> {convertir_fecha_mysql(comp.get('fecha_transaccion'))}")
-                        
-                        try:
-                            sql_comp = """
-                                INSERT INTO comparables (
-                                    propiedad_id, fuente, rol_comparable, direccion, comuna,
-                                    precio_uf, uf_m2, fecha_transaccion, fecha_publicacion, anio_construccion,
-                                    m2_util, m2_total, dormitorios, banios, distancia_metros, link_mapa, link_publicacion
-                                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                            """
-                            vals_comp = (
-                                uid, 
-                                comp.get("fuente", "Desconocido"), 
-                                comp.get("rol", ""), 
-                                comp.get("direccion", ""), 
-                                comp.get("comuna", ""),
-                                limpiar_precio_uf(comp.get("precio_uf")),
-                                limpiar_decimal_chile(comp.get("uf_m2")),
-                                convertir_fecha_mysql(comp.get("fecha_transaccion")),
-                                convertir_fecha_mysql(comp.get("fecha_publicacion")),
-                                comp.get("anio", 0),
-                                limpiar_decimal_chile(comp.get("m2_util")), 
-                                limpiar_decimal_chile(comp.get("m2_total")), 
-                                limpiar_int(comp.get("dormitorios")), 
-                                limpiar_int(comp.get("banios")),
-                                comp.get("distancia_metros", 0),
-                                comp.get("link_maps", ""), 
-                                comp.get("link_publicacion", "")
-                            )
-                            cursor.execute(sql_comp, vals_comp)
-                        except Error as e_comp:
-                             logger.error(f"     ❌ [DEBUG] Error insertando comparable #{i+1}: {e_comp}")
+                    insertar_placeholder = True
             else:
                  logger.error(f"     ❌ [DEBUG] Tipo de dato inesperado en 'comparables': {type(raw_comps)}")
+                 insertar_placeholder = True
+
+            sql_comp = """
+                INSERT INTO comparables (
+                    propiedad_id, fuente, rol_comparable, direccion, comuna,
+                    precio_uf, uf_m2, fecha_transaccion, fecha_publicacion, anio_construccion,
+                    m2_util, m2_total, dormitorios, banios, estacionamientos, bodegas, distancia_metros, link_mapa, link_publicacion
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """
+
+            if not insertar_placeholder:
+                # INSERCIÓN NORMAL (Hay comparables válidos)
+                logger.info(f"     👀 [DEBUG] Se encontraron {len(raw_comps)} comparables. Insertando...")
+                for i, comp in enumerate(raw_comps):
+                    try:
+                        vals_comp = (
+                            uid, 
+                            comp.get("fuente", "Desconocido"), 
+                            comp.get("rol", ""), 
+                            comp.get("direccion", ""), 
+                            comp.get("comuna", ""),
+                            limpiar_precio_uf(comp.get("precio_uf")),
+                            limpiar_decimal_chile(comp.get("uf_m2")),
+                            convertir_fecha_mysql(comp.get("fecha_transaccion")),
+                            convertir_fecha_mysql(comp.get("fecha_publicacion")),
+                            comp.get("anio", 0),
+                            limpiar_decimal_chile(comp.get("m2_util")), 
+                            limpiar_decimal_chile(comp.get("m2_total")), 
+                            limpiar_int(comp.get("dormitorios")), 
+                            limpiar_int(comp.get("banios")),
+                            limpiar_int(comp.get("estacionamientos", 0)),
+                            limpiar_int(comp.get("bodegas", 0)),
+                            comp.get("distancia_metros", 0),
+                            comp.get("link_maps", ""), 
+                            comp.get("link_publicacion", "")
+                        )
+                        cursor.execute(sql_comp, vals_comp)
+                    except Error as e_comp:
+                         logger.error(f"     ❌ [DEBUG] Error insertando comparable #{i+1}: {e_comp}")
+            else:
+                # INSERCIÓN DE FILA PLACEHOLDER (No hay comparables)
+                logger.info(f"     ⚪ Insertando fila placeholder en 'comparables' para {uid}")
+                try:
+                    vals_placeholder = (
+                        uid,        # propiedad_id (OBLIGATORIO)
+                        "S/I",      # fuente (S/I evita errores si la columna es muy corta o ENUM)
+                        "S/I",      # rol_comparable
+                        "Sin Datos",# direccion
+                        "Sin Datos",# comuna
+                        None,       # precio_uf
+                        None,       # uf_m2
+                        None,       # fecha_transaccion
+                        None,       # fecha_publicacion
+                        None,       # anio_construccion
+                        None,       # m2_util
+                        None,       # m2_total
+                        None,       # dormitorios
+                        None,       # banios
+                        None,       # estacionamientos
+                        None,       # bodegas
+                        None,       # distancia_metros
+                        "N/A",      # link_mapa
+                        "N/A"       # link_publicacion
+                    )
+                    cursor.execute(sql_comp, vals_placeholder)
+                except Error as e_comp:
+                     # AQUÍ ESTABA EL TRUCO: Te mostrará el error real de MySQL si vuelve a fallar
+                     logger.error(f"     ❌ [DEBUG] MySQL rechazó el placeholder: {e_comp}")
             
             if callback_progreso:
                 callback_progreso(idx + 1, total)
@@ -290,15 +348,30 @@ def insertar_datos(lista_datos: List[Dict[str, Any]], cancel_event, callback_pro
         logger.success(f"✅ Inyección completada: {total} propiedades guardadas en BD.")
         return True
 
+    # --- NUEVA SEMÁNTICA: Control explícito de Errores MySQL ---
     except Error as e:
         logger.error(f"❌ Error en transacción BD: {e}")
         if conn: conn.rollback()
-        return False
+        
+        # Mapeo de códigos de error de MySQL (errno) a mensajes amigables
+        err_code = e.errno if hasattr(e, 'errno') else 0
+        if err_code in (1046, 1049, 2003, 2005):
+            mensaje_bd = "No se pudo contactar al servidor o base de datos MySQL (Revise las variables de entorno de conexión)."
+        elif err_code in (1406, 1264, 1366, 1292):
+            mensaje_bd = "Error de formato de datos: Una de las propiedades extraídas superó el límite de caracteres o no coincide con el tipo de dato de la base de datos."
+        elif err_code == 1062:
+            mensaje_bd = "Error de duplicidad: El registro o rol que intenta insertar ya existe en la base de datos."
+        elif err_code in (2006, 2013):
+            mensaje_bd = "Se perdió la conexión con la base de datos de forma inesperada mientras se inyectaban los datos."
+        else:
+            mensaje_bd = f"Fallo en la base de datos durante el guardado. La inyección fue cancelada. Detalle técnico: {e.msg if hasattr(e, 'msg') else str(e)}"
+            
+        raise Exception(mensaje_bd)
         
     except Exception as ex:
         logger.error(f"❌ Error general en Paso 4: {ex}")
         if conn: conn.rollback()
-        return False
+        raise Exception(f"Error estructural procesando los datos para la inyección. Detalle técnico: {str(ex)}")
 
     finally:
         if conn and conn.is_connected():

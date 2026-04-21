@@ -40,7 +40,7 @@ def cleanup_temp_files(cancel_event):
         except Exception as e:
             logger.warning(f"   ⚠️ No se pudo eliminar {archivo}: {e}")
 
-def main(cancel_event, ruta_lista="propiedades.csv", progress_callback=None):
+def main(cancel_event, ruta_lista="propiedades.csv", progress_callback=None, partial_error_callback=None):
     """
     Orquestador Maestro del Pipeline de Tasación.
     Gestiona el flujo desde la descarga inicial hasta la inyección en BD.
@@ -65,7 +65,10 @@ def main(cancel_event, ruta_lista="propiedades.csv", progress_callback=None):
             if progress_callback: progress_callback(prog, f"Paso 0: Descargando propiedades ({curr}/{total})...")
 
         total_exitos_descarga, fallidos_paso0, cookies_maestras = paso0_hp.ejecutar(
-            ruta_lista, cancel_event, callback_progreso=cb_paso0
+            ruta_lista, 
+            cancel_event, 
+            callback_progreso=cb_paso0,
+            partial_error_callback=partial_error_callback # <--- ENCHUFAMOS AL PASO 0
         )
 
         if total_exitos_descarga == 0:

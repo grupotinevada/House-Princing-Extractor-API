@@ -7,7 +7,7 @@ from colorama import Fore, Style, init
 
 init(autoreset=True)  # Inicializa colorama
 
-DEBUG_CONSOLE = True    # Desarrollo
+DEBUG_CONSOLE = False    # Desarrollo
 
 # --- 1. DEFINICIÓN DEL NIVEL PERSONALIZADO 'SUCCESS' ---
 # Python no tiene SUCCESS por defecto (INFO=20, WARNING=30). 
@@ -47,7 +47,7 @@ class ColoredFormatter(logging.Formatter):
         return f"{color}{msg}{Style.RESET_ALL}"
 
 def get_logger(name: str, log_dir: str = "logs", log_file: str = None,
-               level_console=None, level_file=logging.DEBUG) -> logging.Logger:
+                level_console=None, level_file=logging.DEBUG) -> logging.Logger:
 
     """
     Devuelve un logger configurado para archivo y consola con colores en consola.
@@ -58,34 +58,37 @@ def get_logger(name: str, log_dir: str = "logs", log_file: str = None,
         log_file = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
 
     log_path = os.path.join(log_dir, log_file)
+    # RUTA DEL LOG GENERAL
+    general_log_path = os.path.join(log_dir, "general.log")
 
     logger = logging.getLogger(name)
-    logger.setLevel(logging.DEBUG)  # Capturamos todo a nivel raíz
+    logger.setLevel(logging.DEBUG)
 
-    # Definir nivel de consola por defecto
     if level_console is None:
         level_console = logging.DEBUG if DEBUG_CONSOLE else logging.INFO
 
-    # Evitar duplicar handlers si get_logger se llama varias veces
     if logger.handlers:
-        # Opcional: Actualizar niveles si ya existe
         return logger
 
     # --- FORMATOS ---
-    # En archivo: Fecha completa y nivel claro
     fmt_file = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     formatter_file = logging.Formatter(fmt_file)
 
-    # En consola: Más limpio, con colores
     fmt_console = "%(asctime)s | %(name)s | [%(levelname)s]     | %(message)s"
-    # Ajustamos el formato de fecha para consola (solo hora)
     formatter_console = ColoredFormatter(fmt_console, datefmt="%H:%M:%S")
 
-    # --- HANDLER ARCHIVO ---
+    # --- HANDLER ARCHIVO ESPECÍFICO (EL QUE YA TENÍAS) ---
     fh = logging.FileHandler(log_path, encoding="utf-8")
     fh.setLevel(level_file)
     fh.setFormatter(formatter_file)
     logger.addHandler(fh)
+
+    # --- HANDLER LOG GENERAL (SUMA DE TODO CON COLORES) ---
+    # Usamos mode='a' para que siempre concatene
+    gh = logging.FileHandler(general_log_path, encoding="utf-8", mode='a')
+    gh.setLevel(level_file)
+    gh.setFormatter(formatter_console) # Formato terminal con colores
+    logger.addHandler(gh)
 
     # --- HANDLER CONSOLA ---
     ch = logging.StreamHandler(sys.stdout)

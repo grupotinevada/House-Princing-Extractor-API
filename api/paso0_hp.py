@@ -181,8 +181,9 @@ def obtener_cookies_selenium(email, password):
 # 3. LÓGICA DE DESCARGA VIA REQUESTS 
 # ==============================================================================
 class HousePricingClient:
-    def __init__(self, worker_id="N/A"):
+    def __init__(self, worker_id="N/A", partial_error_callback=None):
         self.session = requests.Session()
+        self.partial_error_callback = partial_error_callback
         self.worker_id = worker_id
         self.session.headers.update({
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -194,8 +195,15 @@ class HousePricingClient:
         self.csrf_token = None
 
     def _update_csrf_from_cookies(self):
-        self.csrf_token = self.session.cookies.get("csrftoken")
-        if self.csrf_token:
+        # Buscamos la cookie iterando para evitar el crash de múltiples cookies (CookieConflictError)
+        token_encontrado = None
+        for cookie in self.session.cookies:
+            if cookie.name == "csrftoken":
+                token_encontrado = cookie.value
+                break
+                
+        if token_encontrado:
+            self.csrf_token = token_encontrado
             self.session.headers.update({"X-CSRFToken": self.csrf_token})
 
     def _random_delay(self, min_s=1.5, max_s=3.5):
@@ -341,6 +349,14 @@ class HousePricingClient:
                 url_base=URL_BASE,
                 worker_id=self.worker_id
             )
+
+            if datos_tasacion.get("motivo_error") and self.partial_error_callback:
+                self.partial_error_callback(
+                    rol=rol_formateado, 
+                    paso="Tasación (Paso 0)", 
+                    motivo=datos_tasacion.get("motivo_error")
+                )
+            
             meta_data = {
                 "link_informe": url_informe_final,
                 "rol_origen": rol_formateado,
@@ -495,10 +511,7 @@ def orquestador_descargas(lista_propiedades, cancel_event, callback_progreso=Non
 # ==============================================================================
 # ENTRY POINT
 # ==============================================================================
-# ==============================================================================
-# ENTRY POINT
-# ==============================================================================
-def ejecutar(ruta_archivo: str, cancel_event, callback_progreso=None):
+def ejecutar(ruta_archivo: str, cancel_event, callback_progreso=None, partial_error_callback=None):
     logger.info(f"=== PASO 0: INICIO DEL FLUJO DE DESCARGAS ===")
     logger.info(f"📂 Archivo de entrada: {ruta_archivo}")
     
