@@ -42,8 +42,7 @@ URL_BUSQUEDA_ROL = f"{URL_BASE}/search-rol/"
 URL_GENERAR_INFORME = f"{URL_BASE}/informe-antecedentes/generar/" # <--- RUTA ACTUALIZADA
 URL_CHECK_INFORME = f"{URL_BASE}/dashboard/informe-antecedentes-check/"
 
-WORKERS = 5 
-
+WORKERS = 3
 if not URL_ANTECEDENTES or not URL_LOGIN:
     logger.error("❌ ERROR CRÍTICO: No se cargaron las URL del archivo .env")
     raise ValueError("Faltan variables de entorno en el archivo .env")
