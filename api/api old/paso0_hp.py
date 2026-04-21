@@ -9,19 +9,10 @@ import requests
 from bs4 import BeautifulSoup
 from typing import List, Dict, Any, Optional
 from concurrent.futures import ThreadPoolExecutor
-
-# --- DEPENDENCIAS PARA EL ABREPUERTAS ---
-import undetected_chromedriver as uc
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.action_chains import ActionChains
-from pyvirtualdisplay import Display
-# -----------------------------------------------
+from pasotasacion import obtener_tasacion
 
 from dotenv import load_dotenv
 from logger import get_logger
-from .pasotasacion import obtener_tasacion
 
 # Configuración
 logger = get_logger("paso0_hp", log_dir="logs", log_file="paso0.log")
@@ -39,7 +30,7 @@ PASS_HP = os.getenv("PASSWORD_HP")
 
 # Endpoints directos para requests
 URL_BUSQUEDA_ROL = f"{URL_BASE}/search-rol/"
-URL_GENERAR_INFORME = f"{URL_BASE}/informe-antecedentes/generar/" # <--- RUTA ACTUALIZADA
+URL_GENERAR_INFORME = f"{URL_BASE}/dashboard/informe-antecedentes-resultado/"
 URL_CHECK_INFORME = f"{URL_BASE}/dashboard/informe-antecedentes-check/"
 
 WORKERS = 5 
@@ -94,97 +85,14 @@ def estandarizar_data(lista_cruda: List[Dict[str, Any]]) -> List[Dict[str, Any]]
     logger.info(f"✅ Datos listos para procesar: {len(lista_limpia)} propiedades.")
     return lista_limpia
 
-
 # ==============================================================================
-# 2. EL ABREPUERTAS (SELENIUM PARA EVADIR TURNSTILE)
-# ==============================================================================
-def obtener_cookies_selenium(email, password):
-    logger.info("🤖 Iniciando Selenium (Abrepuertas) en Monitor Virtual...")
-    
-    # INICIAMOS EL MONITOR VIRTUAL FANTASMA (Invisible pero real para Chrome)
-    # En Windows esto podría dar error, está pensado para el servidor Linux
-    display = None
-    if os.name != 'nt': # Solo levanta Xvfb si no estamos en Windows
-        display = Display(visible=0, size=(1920, 1080))
-        display.start()
-    
-    options = uc.ChromeOptions()
-    options.add_argument("--window-size=1920,1080")
-    
-    # ❌ ELIMINAMOS --headless=new PARA SIEMPRE
-    
-    # Banderas necesarias para servidores Linux (estabilidad)
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--disable-gpu")
-    
-    cookies_dict = {}
-    driver = None
-    
-    # Helper local para simular tipeo humano
-    def human_typing(element, text):
-        for char in text:
-            element.send_keys(char)
-            time.sleep(random.uniform(0.05, 0.15))
-            
-    try:
-        driver = uc.Chrome(options=options)
-        driver.get(URL_LOGIN)
-        
-        logger.debug("   ➡️ Esperando formulario de login...")
-        WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.NAME, "email")))
-        
-        time.sleep(random.uniform(1.5, 3.0))
-        
-        # Email
-        email_input = driver.find_element(By.NAME, "email")
-        ActionChains(driver).move_to_element(email_input).click().perform()
-        time.sleep(random.uniform(0.2, 0.6))
-        human_typing(email_input, email)
-        
-        time.sleep(random.uniform(0.5, 1.2))
-        
-        # Password
-        pass_input = driver.find_element(By.NAME, "password")
-        ActionChains(driver).move_to_element(pass_input).click().perform()
-        time.sleep(random.uniform(0.2, 0.6))
-        human_typing(pass_input, password)
-        
-        logger.debug("   ➡️ Credenciales escritas. Esperando a que Turnstile analice la entropía...")
-        time.sleep(random.uniform(3.5, 5.0)) 
-        
-        # Click
-        submit_btn = driver.find_element(By.XPATH, "/html/body/section/div/div/section/div/div/div/div[2]/form/div[4]/button")
-        ActionChains(driver).move_to_element(submit_btn).pause(random.uniform(0.5, 1.0)).click().perform()
-        
-        WebDriverWait(driver, 25).until(
-            lambda d: "login" not in d.current_url.lower()
-        )
-        
-        logger.success("   ✅ Login exitoso con Selenium. Extrayendo cookies...")
-        
-        for cookie in driver.get_cookies():
-            cookies_dict[cookie['name']] = cookie['value']
-            
-    except Exception as e:
-        logger.error(f"❌ Error en el Abrepuertas Selenium: {e}")
-    finally:
-        if driver:
-            driver.quit() 
-            logger.debug("   🧹 Instancia de Chrome cerrada.")
-        if display:
-            display.stop() # Importante apagar el monitor virtual
-            logger.debug("   🧹 Monitor virtual apagado.")
-            
-    return cookies_dict
-
-# ==============================================================================
-# 3. LÓGICA DE DESCARGA VIA REQUESTS 
+# 2 y 3. LÓGICA DE DESCARGA VIA REQUESTS (REEMPLAZO SELENIUM)
 # ==============================================================================
 class HousePricingClient:
     def __init__(self, worker_id="N/A"):
         self.session = requests.Session()
         self.worker_id = worker_id
+        # Cabeceras robustas para simular navegador real
         self.session.headers.update({
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
@@ -200,19 +108,82 @@ class HousePricingClient:
             self.session.headers.update({"X-CSRFToken": self.csrf_token})
 
     def _random_delay(self, min_s=1.5, max_s=3.5):
+        """Previene rate-limiting simulando tiempos de interacción humana."""
         time.sleep(random.uniform(min_s, max_s))
 
-    def inyectar_cookies(self, cookies_dict):
-        for name, value in cookies_dict.items():
-            self.session.cookies.set(name, value)
-        self._update_csrf_from_cookies()
-        logger.debug(f"   💉 [Worker-{self.worker_id}] Cookies inyectadas exitosamente.")
+    def login(self, email, password):
+        logger.info(f"🔐 [Worker-{self.worker_id}] Intentando login para: {email}")
+        
+        login_form_url = f"{URL_BASE}/login-service/?next=/dashboard/"
+        login_service_url = f"{URL_BASE}/login-service/"
+
+        # Simular llegada a la web principal
+        self.session.get(URL_BASE)
+        self._random_delay(1.0, 2.0)
+
+        logger.debug(f"   ➡️ [Worker-{self.worker_id}] Pidiendo el formulario de login dinámico...")
+        res_form = self.session.get(
+            login_form_url,
+            headers={
+                "Referer": f"{URL_BASE}/login/",
+                "X-Requested-With": "XMLHttpRequest",
+                "Accept": "*/*"
+            }
+        )
+
+        self.csrf_token = self.session.cookies.get("csrftoken")
+        soup = BeautifulSoup(res_form.text, "html.parser")
+        token_input = soup.find("input", {"name": "csrfmiddlewaretoken"})
+        
+        if token_input:
+            self.csrf_token = token_input["value"]
+        elif not self.csrf_token:
+            logger.error(f"❌ [Worker-{self.worker_id}] Fracasó la obtención del CSRF.")
+            return False
+
+        self._random_delay(2.0, 4.0) # Tiempo humano llenando credenciales
+
+        data = {
+            "csrfmiddlewaretoken": self.csrf_token,
+            "next": "/dashboard/",
+            "email": email,
+            "password": password
+        }
+
+        logger.debug(f"   ➡️ [Worker-{self.worker_id}] Enviando credenciales...")
+        res_post = self.session.post(
+            login_service_url, 
+            data=data, 
+            headers={
+                "Referer": f"{URL_BASE}/login/",
+                "Origin": URL_BASE,
+                "X-Requested-With": "XMLHttpRequest",
+                "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"
+            }
+        )
+        
+        if "sessionid" in self.session.cookies:
+            logger.success(f"✅ [Worker-{self.worker_id}] Login exitoso via Requests.")
+            self._update_csrf_from_cookies()
+            return True
+            
+        try:
+            respuesta_json = res_post.json()
+            if respuesta_json.get("success", False) or "redirect" in res_post.text:
+                logger.success(f"✅ [Worker-{self.worker_id}] Login exitoso via Requests (JSON OK).")
+                self._update_csrf_from_cookies()
+                return True
+        except:
+            pass
+            
+        logger.error(f"❌ [Worker-{self.worker_id}] Falló el login final. HTTP Code: {res_post.status_code}")
+        return False
 
     def buscar_y_descargar(self, rol, comuna, cancel_event):
         logger.info(f"🔎 [Worker-{self.worker_id}] Procesando: {comuna} - Rol {rol}")
         try:
             self._update_csrf_from_cookies()
-            self._random_delay(1.5, 3.0)
+            self._random_delay(1.5, 3.0) # Pausa entre búsquedas
 
             # 1. Buscar Rol
             rol_formateado = "-".join([p.lstrip("0") or "0" for p in str(rol).replace("−", "-").replace("–", "-").replace("—", "-").split("-")])
@@ -227,18 +198,19 @@ class HousePricingClient:
                 "Referer": f"{URL_BASE}/dashboard/informe-antecedentes/"
             }, timeout=20)
             
+            # --- NUEVA SEMÁNTICA: Control de Errores HTTP ---
             if res_search.status_code in [401, 403]:
-                raise Exception("Acceso bloqueado por House Pricing (posible bloqueo de IP o sesión expirada).")
+                raise Exception("Acceso bloqueado por House Pricing (posible bloqueo de IP o Captcha activo).")
             elif res_search.status_code >= 500:
                 raise Exception(f"El servidor de House Pricing está caído o en mantenimiento (Error HTTP {res_search.status_code}).")
 
             search_json = res_search.json()
             if not search_json.get("success") or not search_json.get("match"):
                 logger.error(f"   ❌ [Worker-{self.worker_id}] Rol {rol_formateado} no encontrado en {comuna}")
-                return "ROL_NOT_FOUND" 
+                return "ROL_NOT_FOUND" # Respetando validación original
             
             match = search_json["match"][0]
-            self._random_delay(1.0, 2.5) 
+            self._random_delay(1.0, 2.5) # Simula tiempo de ver resultados
             
             # 2. Generar Informe
             report_payload = {
@@ -254,19 +226,20 @@ class HousePricingClient:
             res_trigger = self.session.post(URL_GENERAR_INFORME, data=report_payload, headers={
                 "HX-Request": "true",
                 "X-Requested-With": "XMLHttpRequest",
-                "Referer": f"{URL_BASE}/"
+                "Referer": f"{URL_BASE}/dashboard/informe-antecedentes/"
             }, timeout=20)
             
-            poll_match = re.search(r'hx-get="(/informe-antecedentes/[\w/]+/check/)"', res_trigger.text)
+            poll_match = re.search(r'hx-get="(/dashboard/informe-antecedentes-check/[\w/]+)"', res_trigger.text)
             if not poll_match:
                 logger.error(f"   ❌ [Worker-{self.worker_id}] No se encontró el link de seguimiento (Polling).")
+                # --- NUEVA SEMÁNTICA: Cambio de estructura web ---
                 raise Exception("Error técnico: No se encontró el enlace de generación del documento. Posible cambio en la web de House Pricing.")
             
             poll_url = f"{URL_BASE}{poll_match.group(1)}"
             logger.info(f"   ⏳ [Worker-{self.worker_id}] Informe en proceso. Iniciando polling...")
 
-            # 3. Polling hasta encontrar el enlace del Informe Final
-            ruta_informe_web = None
+            # 3. Polling
+            pdf_url = None
             for _ in range(35): # Aprox 2.5 minutos de tolerancia
                 if cancel_event.is_set(): return False
                 
@@ -276,86 +249,64 @@ class HousePricingClient:
                     "X-Requested-With": "XMLHttpRequest"
                 }, timeout=15)
                 
-                soup_check = BeautifulSoup(res_check.text, "html.parser")
-                # Buscamos un tag <a> cuyo href comience con /informe-antecedentes/ y termine en /
-                link_informe = soup_check.find("a", href=re.compile(r'^/informe-antecedentes/\d+/$'))
-                
-                if link_informe:
-                    ruta_informe_web = link_informe["href"]
+                if ".pdf" in res_check.text:
+                    soup_check = BeautifulSoup(res_check.text, "html.parser")
+                    pdf_url = soup_check.find("a", href=True)["href"]
                     break
-                    
                 logger.debug(f"      ...[Worker-{self.worker_id}] aún procesando...")
 
-            if not ruta_informe_web:
-                logger.error(f"   ❌ [Worker-{self.worker_id}] Timeout: El servidor no entregó el link hacia el informe final.")
-                raise Exception("Tiempo de espera agotado (Timeout). House Pricing no generó el link del informe a tiempo.")
+            if not pdf_url:
+                logger.error(f"   ❌ [Worker-{self.worker_id}] Timeout: El servidor no entregó el PDF a tiempo.")
+                # --- NUEVA SEMÁNTICA: Timeout de procesamiento interno HP ---
+                raise Exception("Tiempo de espera agotado (Timeout). House Pricing no generó el PDF a tiempo.")
 
-            self._random_delay(0.5, 1.5) 
+            self._random_delay(0.5, 1.5) # Pausa antes de la descarga
 
-            # 4. Obtener Informe Web (HTML)
-            url_informe_final = f"{URL_BASE}{ruta_informe_web}"
-            logger.debug(f"   📥 [Worker-{self.worker_id}] Descargando Informe Web (HTML) desde {url_informe_final}...")
-            res_html = self.session.get(url_informe_final, timeout=20)
-            res_html.raise_for_status()
+            # 4. Descarga de PDF Directa a Memoria -> Disco
+            logger.debug(f"   📥 [Worker-{self.worker_id}] Descargando PDF desde link final...")
+            res_pdf = self.session.get(pdf_url, stream=True, timeout=20)
+            res_pdf.raise_for_status()
 
-            nombre_base = f"{comuna}_{rol_formateado}".replace(" ", "_").replace("/", "-")
-            ruta_html = os.path.join(OUTPUT_FOLDER, f"{nombre_base}.html")
+            nombre_archivo = f"{comuna}_{rol_formateado}.pdf".replace(" ", "_").replace("/", "-")
+            ruta_pdf = os.path.join(OUTPUT_FOLDER, nombre_archivo)
             
-            with open(ruta_html, "w", encoding="utf-8") as f:
-                f.write(res_html.text)
+            tamanio_descargado = 0
+            with open(ruta_pdf, "wb") as f:
+                for chunk in res_pdf.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+                        tamanio_descargado += len(chunk)
             
-            logger.success(f"   ✅ [Worker-{self.worker_id}] HTML del informe guardado: {nombre_base}.html")
-
-            # 5. Fallback: Buscar y Descargar PDF desde el HTML final
-            soup_final = BeautifulSoup(res_html.text, "html.parser")
-            link_pdf = soup_final.find("a", href=re.compile(r'\.pdf', re.IGNORECASE))
+            # --- NUEVA SEMÁNTICA: Validación de archivo corrupto ---
+            if tamanio_descargado == 0:
+                raise Exception("El PDF descargado desde House Pricing está corrupto, ilegible o vacío (0 KB).")
             
-            if link_pdf and link_pdf.get("href"):
-                pdf_url = link_pdf["href"]
-                logger.debug(f"   📥 [Worker-{self.worker_id}] Link PDF detectado. Descargando archivo de respaldo...")
-                
-                res_pdf = self.session.get(pdf_url, stream=True, timeout=20)
-                res_pdf.raise_for_status()
-                
-                ruta_pdf = os.path.join(OUTPUT_FOLDER, f"{nombre_base}.pdf")
-                tamanio_descargado = 0
-                with open(ruta_pdf, "wb") as f:
-                    for chunk in res_pdf.iter_content(chunk_size=8192):
-                        if chunk:
-                            f.write(chunk)
-                            tamanio_descargado += len(chunk)
-                            
-                if tamanio_descargado > 0:
-                    logger.success(f"   ✅ [Worker-{self.worker_id}] PDF de respaldo guardado: {nombre_base}.pdf")
-                else:
-                    logger.warning(f"   ⚠️ [Worker-{self.worker_id}] El PDF se descargó vacío (0 KB).")
-            else:
-                logger.warning(f"   ⚠️ [Worker-{self.worker_id}] No se encontró botón de descarga PDF en el HTML.")
-
-            # 6. Metadata Mínima (Sin tasación, Paso 1 se encargará de extraerla del HTML)
-            ruta_json = os.path.join(OUTPUT_FOLDER, f"{nombre_base}.pdf.json") # Mantenemos nombre para compatibilidad del script
-            
+            # 5. Metadata (Tasaciones a 0 como se especificó en la lógica request)
             datos_tasacion = obtener_tasacion(
-                session=self.session,
-                match_data=match,
-                csrf_token=self.csrf_token,
-                url_base=URL_BASE,
+                session=self.session, 
+                match_data=match, 
+                csrf_token=self.csrf_token, 
+                url_base=URL_BASE, 
                 worker_id=self.worker_id
             )
+
+            ruta_json = ruta_pdf + ".json"
             meta_data = {
-                "link_informe": url_informe_final,
+                "link_informe": pdf_url,
                 "rol_origen": rol_formateado,
                 "comuna_origen": comuna,
-                "tasa_vta_clp": datos_tasacion.get("tasa_vta_clp", 0),
-                "tasa_vta_uf": datos_tasacion.get("tasa_vta_uf", "0"),
-                "tasa_arr_clp": datos_tasacion.get("tasa_arr_clp", 0),
-                "tasa_arr_uf": datos_tasacion.get("tasa_arr_uf", "0")
+                "tasa_vta_clp": datos_tasacion["tasa_vta_clp"],
+                "tasa_vta_uf": datos_tasacion["tasa_vta_uf"],
+                "tasa_arr_clp": datos_tasacion["tasa_arr_clp"],
+                "tasa_arr_uf": datos_tasacion["tasa_arr_uf"]
             }
             with open(ruta_json, "w", encoding="utf-8") as f:
                 json.dump(meta_data, f)
 
+            logger.success(f"   ✅ [Worker-{self.worker_id}] PDF y metadata guardados: {nombre_archivo}")
             return True
 
+        # --- NUEVA SEMÁNTICA: Captura explícita de errores de Red ---
         except requests.exceptions.Timeout:
             logger.warning(f"   ⏳ [Worker-{self.worker_id}] Timeout en la red.")
             raise Exception("Tiempo de espera de red agotado. Los servidores de House Pricing están lentos o no responden.")
@@ -364,29 +315,37 @@ class HousePricingClient:
             raise Exception("Error de conexión de red con los servidores de House Pricing.")
         except Exception as e:
             logger.error(f"   ❌ [Worker-{self.worker_id}] Error inesperado en requests: {e}")
+            # Se lanza la excepción hacia el worker para que la atrape y ponga en el dict
             raise
 
 # ==============================================================================
-# WORKER ADAPTADO A REQUESTS + COOKIES INYECTADAS
+# WORKER ADAPTADO A REQUESTS
 # ==============================================================================
-def procesar_lote_worker(id_worker, sublista_propiedades, cancel_event, cookies_auth):
+def procesar_lote_worker(id_worker, sublista_propiedades, cancel_event):
     client = HousePricingClient(worker_id=id_worker)
-    client.inyectar_cookies(cookies_auth)
     exitos = 0
     fallidos = [] 
 
     try:
+        if not client.login(EMAIL_HP, PASS_HP):
+            for i in sublista_propiedades:
+                # --- NUEVA SEMÁNTICA: Detalle de Login ---
+                i['motivo_error'] = "Fallo de Login: House Pricing rechazó el inicio de sesión o el servidor está caído."
+                fallidos.append(i)
+            return 0, fallidos
+        
         for item in sublista_propiedades:
             if cancel_event.is_set(): break
             
             exito_item = False
-            motivo_fallo = "Error desconocido de red." 
+            motivo_fallo = "Error desconocido de red." # Variable que arrastra el último error detectado
             
             try:
                 resultado = client.buscar_y_descargar(item['rol'], item['comuna'], cancel_event)
                 
                 if resultado == "ROL_NOT_FOUND":
                     logger.error(f"      🚫 [Worker-{id_worker}] Saltando {item['rol']}: No existe en el servidor.")
+                    # --- NUEVA SEMÁNTICA: Rol no existe ---
                     item['motivo_error'] = "El rol ingresado no existe en los registros de House Pricing para esta comuna."
                     fallidos.append(item)
                     continue 
@@ -400,11 +359,11 @@ def procesar_lote_worker(id_worker, sublista_propiedades, cancel_event, cookies_
             except Exception as error_inicial:
                 motivo_fallo = str(error_inicial)
                 
-                # Reintentos
+                # Ejecuta los reintentos manteniendo tu estructura original
                 for intento in range(1, 3):
                     if cancel_event.is_set(): break
                     logger.warning(f"      🔄 [Worker-{id_worker}] Reintento {intento+1}/3 para {item['rol']}... (Previo: {motivo_fallo})")
-                    client._random_delay(5.0, 10.0) 
+                    client._random_delay(5.0, 10.0) # Castigo de tiempo si falló (Anti-block)
                     
                     try:
                         resultado = client.buscar_y_descargar(item['rol'], item['comuna'], cancel_event)
@@ -422,6 +381,7 @@ def procesar_lote_worker(id_worker, sublista_propiedades, cancel_event, cookies_
                         motivo_fallo = str(error_reintento)
             
             if not exito_item:
+                # Si falló después de todos los intentos, le asigna el último error real capturado
                 if 'motivo_error' not in item:
                     item['motivo_error'] = motivo_fallo
                 fallidos.append(item)
@@ -432,23 +392,13 @@ def procesar_lote_worker(id_worker, sublista_propiedades, cancel_event, cookies_
     return exitos, fallidos
 
 # ==============================================================================
-# ORQUESTADOR (INYECCIÓN DE ABREPUERTAS)
+# ORQUESTADOR (INTACTO)
 # ==============================================================================
 def orquestador_descargas(lista_propiedades, cancel_event, callback_progreso=None):
     if not os.path.exists(OUTPUT_FOLDER): os.makedirs(OUTPUT_FOLDER)
     
     total = len(lista_propiedades)
     logger.info(f"🚀 Iniciando ciclo de descargas PARALELO para {total} propiedades. WORKERS={WORKERS}")
-
-    cookies_auth = obtener_cookies_selenium(EMAIL_HP, PASS_HP)
-    if not cookies_auth or "sessionid" not in cookies_auth:
-        logger.error("❌ Fallo crítico: No se pudieron obtener las cookies de sesión con Selenium.")
-        fallidos = []
-        for p in lista_propiedades:
-            p['motivo_error'] = "Fallo de Login: Cloudflare bloqueó el acceso inicial (Turnstile)."
-            fallidos.append(p)
-        # --- MODIFICADO: Agregamos None al final ---
-        return 0, fallidos, None
 
     chunk_size = math.ceil(total / WORKERS)
     chunks = [lista_propiedades[i:i + chunk_size] for i in range(0, total, chunk_size)]
@@ -460,7 +410,7 @@ def orquestador_descargas(lista_propiedades, cancel_event, callback_progreso=Non
     with ThreadPoolExecutor(max_workers=WORKERS) as executor:
         futures = []
         for i, chunk in enumerate(chunks):
-            futures.append(executor.submit(procesar_lote_worker, i+1, chunk, cancel_event, cookies_auth))
+            futures.append(executor.submit(procesar_lote_worker, i+1, chunk, cancel_event))
         
         for future in futures:
             try:
@@ -490,29 +440,23 @@ def orquestador_descargas(lista_propiedades, cancel_event, callback_progreso=Non
 
     logger.success(f"🏁 Proceso finalizado. Descargas exitosas: {total_exitos}/{total}")     
     
-    # --- MODIFICADO: Retornamos las cookies_auth ---
-    return total_exitos, total_fallidos, cookies_auth
+    return total_exitos, total_fallidos
 
 # ==============================================================================
-# ENTRY POINT
+# ENTRY POINT (INTACTO)
 # ==============================================================================
-# ==============================================================================
-# ENTRY POINT
-# ==============================================================================
-def ejecutar(ruta_archivo: str, cancel_event, callback_progreso=None):
+def ejecutar(ruta_archivo: str, cancel_event, callback_progreso=None) -> bool:
     logger.info(f"=== PASO 0: INICIO DEL FLUJO DE DESCARGAS ===")
     logger.info(f"📂 Archivo de entrada: {ruta_archivo}")
     
     raw = detectar_y_cargar(ruta_archivo)
     if not raw: 
         logger.error("❌ No se pudieron cargar los datos iniciales. Abortando.")
-        # --- MODIFICADO ---
-        return 0, [], None 
+        return 0, []
         
     clean = estandarizar_data(raw)
     if not clean: 
         logger.error("❌ No hay datos válidos después de la limpieza. Abortando.")
-        # --- MODIFICADO ---
-        return 0, [], None 
+        return 0, []
         
     return orquestador_descargas(clean, cancel_event, callback_progreso=callback_progreso)

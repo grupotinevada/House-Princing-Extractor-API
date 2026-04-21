@@ -83,18 +83,6 @@ def limpiar_int(valor: Any) -> int:
     except:
         return 0
 
-
-def limpiar_anio_mysql(valor: Any) -> Any:
-    """Convierte a entero para BD. Si viene la etiqueta de error o vacío, retorna None (NULL)."""
-    if not valor or str(valor).strip() == "Sin datos desde hp" or str(valor).strip() == "None":
-        return None
-    try:
-        # Extrae solo los números por si viene algo como "2021." o espacios
-        s = re.sub(r'[^\d]', '', str(valor))
-        return int(s) if s else None
-    except:
-        return None
-
 # ==============================================================================
 #  LÓGICA PRINCIPAL
 # ==============================================================================
@@ -117,9 +105,7 @@ def insertar_datos(lista_datos: List[Dict[str, Any]], cancel_event, callback_pro
     logger.info("💾 PASO 4: Iniciando inyección a Base de Datos...")
     
     conn = get_db_connection()
-    # --- NUEVA SEMÁNTICA: Validación de Conexión Inicial ---
-    if not conn: 
-        raise Exception("Fallo Crítico: No se pudo establecer conexión con la Base de Datos. Verifique las credenciales o el estado del servidor MySQL.")
+    if not conn: return False
 
     cursor = conn.cursor()
     total = len(lista_datos)
@@ -178,14 +164,14 @@ def insertar_datos(lista_datos: List[Dict[str, Any]], cancel_event, callback_pro
                 limpiar_decimal_chile(carac.get("M2 Terreno")),
                 avaluo.get("Avalúo Total"), avaluo.get("Avalúo Exento"), 
                 avaluo.get("Avalúo Afecto"), avaluo.get("Contribuciones Semestrales"),
-                cbr.get("Foja"), cbr.get("Número"), limpiar_anio_mysql(cbr.get("Año")),
+                cbr.get("Foja"), cbr.get("Número"), cbr.get("Año"), 
                 fecha_tx_clean,
                 monto_tx_clean, 
                 vend_str, comp_str, meta.get("nombre"),
                 meta.get("link_informe"), 
 
                 item.get("tasa_vta_clp", 0),
-                limpiar_precio_uf(item.get("tasa_vta_uf", "0")), 
+                limpiar_precio_uf(item.get("tasa_vta_uf", "0")), # Limpia el punto de miles (4.638 -> 4638.0)
                 item.get("tasa_arr_clp", 0),
                 limpiar_precio_uf(item.get("tasa_arr_uf", "0"))
             )
@@ -259,6 +245,7 @@ def insertar_datos(lista_datos: List[Dict[str, Any]], cancel_event, callback_pro
                     logger.info(f"     👀 [DEBUG] Se encontraron {len(raw_comps)} comparables. Insertando...")
                     
                     for i, comp in enumerate(raw_comps):
+
                         logger.debug("REVISANDO FECHAS DE LOS COMPARABLES TRANSACCION Y PUBLICACION")
                         logger.debug(f"     🔍 Fecha Publicación antes : {comp.get('fecha_publicacion')} | despues -> {convertir_fecha_mysql(comp.get('fecha_publicacion'))}")
                         logger.debug(f"     🔍 Fecha Transacción antes : {comp.get('fecha_transaccion')} | despues -> {convertir_fecha_mysql(comp.get('fecha_transaccion'))}")
@@ -268,8 +255,8 @@ def insertar_datos(lista_datos: List[Dict[str, Any]], cancel_event, callback_pro
                                 INSERT INTO comparables (
                                     propiedad_id, fuente, rol_comparable, direccion, comuna,
                                     precio_uf, uf_m2, fecha_transaccion, fecha_publicacion, anio_construccion,
-                                    m2_util, m2_total, dormitorios, banios, estacionamientos, bodegas, distancia_metros, link_mapa, link_publicacion
-                                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                    m2_util, m2_total, dormitorios, banios, distancia_metros, link_mapa, link_publicacion
+                                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                             """
                             vals_comp = (
                                 uid, 
@@ -286,8 +273,6 @@ def insertar_datos(lista_datos: List[Dict[str, Any]], cancel_event, callback_pro
                                 limpiar_decimal_chile(comp.get("m2_total")), 
                                 limpiar_int(comp.get("dormitorios")), 
                                 limpiar_int(comp.get("banios")),
-                                limpiar_int(comp.get("estacionamientos", 0)),
-                                limpiar_int(comp.get("bodegas", 0)),
                                 comp.get("distancia_metros", 0),
                                 comp.get("link_maps", ""), 
                                 comp.get("link_publicacion", "")
@@ -305,30 +290,15 @@ def insertar_datos(lista_datos: List[Dict[str, Any]], cancel_event, callback_pro
         logger.success(f"✅ Inyección completada: {total} propiedades guardadas en BD.")
         return True
 
-    # --- NUEVA SEMÁNTICA: Control explícito de Errores MySQL ---
     except Error as e:
         logger.error(f"❌ Error en transacción BD: {e}")
         if conn: conn.rollback()
-        
-        # Mapeo de códigos de error de MySQL (errno) a mensajes amigables
-        err_code = e.errno if hasattr(e, 'errno') else 0
-        if err_code in (1046, 1049, 2003, 2005):
-            mensaje_bd = "No se pudo contactar al servidor o base de datos MySQL (Revise las variables de entorno de conexión)."
-        elif err_code in (1406, 1264, 1366, 1292):
-            mensaje_bd = "Error de formato de datos: Una de las propiedades extraídas superó el límite de caracteres o no coincide con el tipo de dato de la base de datos."
-        elif err_code == 1062:
-            mensaje_bd = "Error de duplicidad: El registro o rol que intenta insertar ya existe en la base de datos."
-        elif err_code in (2006, 2013):
-            mensaje_bd = "Se perdió la conexión con la base de datos de forma inesperada mientras se inyectaban los datos."
-        else:
-            mensaje_bd = f"Fallo en la base de datos durante el guardado. La inyección fue cancelada. Detalle técnico: {e.msg if hasattr(e, 'msg') else str(e)}"
-            
-        raise Exception(mensaje_bd)
+        return False
         
     except Exception as ex:
         logger.error(f"❌ Error general en Paso 4: {ex}")
         if conn: conn.rollback()
-        raise Exception(f"Error estructural procesando los datos para la inyección. Detalle técnico: {str(ex)}")
+        return False
 
     finally:
         if conn and conn.is_connected():

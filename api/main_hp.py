@@ -2,358 +2,219 @@ import os
 import json
 import shutil
 import uuid
+import threading
 from datetime import datetime
 
-# Importamos los módulos de lógica
-from . import paso0_hp, paso1_hp, paso2_hp, paso3_hp, paso4_hp
+# --- IMPORTACIÓN DE MÓDULOS DE LÓGICA ---
+from . import paso0_hp, paso1_html_hp, paso1_pdf_hp, paso2_hp, paso3_hp, paso4_hp
 from logger import get_logger
 
-# --- CONFIGURACIÓN ---
+# --- CONFIGURACIÓN DE RUTAS ---
 CARPETA_PDFS = "./input_pdfs"
 OUTPUT_FOLDER = "house_pricing_outputs"
 
-# Archivos temporales
+# Archivos temporales para el flujo
 TEMP_JSON_PASO1 = "temp_paso1.json"
-TEMP_JSON_FINAL = "temp_final.json"
 TEMP_EXCEL = "temp_reporte.xlsx"
 
+# Control de limpieza
 ENABLE_CLEANUP = True 
 
 logger = get_logger("main_hp", log_dir="logs", log_file="main_hp.log")
 
-# CORRECCIÓN: Agregar cancel_event
 def cleanup_temp_files(cancel_event):
+    """Limpia los rastros temporales del proceso actual."""
     if not ENABLE_CLEANUP:
         logger.info("ℹ️ Limpieza de archivos desactivada (modo debug).")
         return
 
-    archivos_a_eliminar = [TEMP_JSON_PASO1]
-
+    archivos_a_eliminar = [TEMP_JSON_PASO1, TEMP_EXCEL]
     logger.info("🧹 Ejecutando limpieza de archivos temporales...")
 
-    # Eliminar archivos temporales
     for archivo in archivos_a_eliminar:
-        if cancel_event.is_set():
-            logger.info("🛑 Proceso cancelado por usuario.")
-            return
+        if cancel_event.is_set(): break
         try:
             if os.path.exists(archivo):
                 os.remove(archivo)
-                logger.info(f"   -> Eliminado: {archivo}")
+                logger.debug(f"   🗑️ Eliminado: {archivo}")
         except Exception as e:
             logger.warning(f"   ⚠️ No se pudo eliminar {archivo}: {e}")
 
-    # Eliminar carpeta completa y recrearla (Windows y Linux)
+def main(cancel_event, ruta_lista="propiedades.csv", progress_callback=None):
+    """
+    Orquestador Maestro del Pipeline de Tasación.
+    Gestiona el flujo desde la descarga inicial hasta la inyección en BD.
+    """
     try:
-        if os.path.exists(CARPETA_PDFS):
-            shutil.rmtree(CARPETA_PDFS)
-            logger.info(f"   -> Carpeta eliminada: {CARPETA_PDFS}")
+        logger.info("=== INICIO DEL FLUJO DE TASACIÓN MAESTRO ===")
+        if progress_callback: progress_callback(0, "Iniciando Pipeline y validando directorios...")
 
-        os.makedirs(CARPETA_PDFS, exist_ok=True)
-        logger.info(f"   -> Carpeta recreada: {CARPETA_PDFS}")
+        # 1. Asegurar estructura de directorios
+        for folder in [CARPETA_PDFS, OUTPUT_FOLDER]:
+            if not os.path.exists(folder):
+                os.makedirs(folder)
 
-    except Exception as e:
-        logger.warning(f"   ⚠️ No se pudo resetear {CARPETA_PDFS}: {e}")
-
-
-def calcular_progreso_global(paso_idx, items_procesados, total_items, callback):
-    """
-    Calcula el % global basado en 5 pasos con pesos ponderados por duración estimada:
-    - Paso 0 (Descargas): 0-15%
-    - Paso 1 (PDF): 15-30%
-    - Paso 2 (Selenium): 30-80% (El más lento)
-    - Paso 3 (Excel): 80-90%
-    - Paso 4 (Base de Datos): 90-100%
-    """
-    if callback:
-        # Definición de rangos
-        bases = [0, 15, 30, 80, 90]  
-        pesos = [15, 15, 50, 10, 10] 
-
-        # Protección por si el índice se sale
-        idx = paso_idx if 0 <= paso_idx < 5 else 0
-        
-        base = bases[idx]
-        rango = pesos[idx]
-
-        if total_items > 0:
-            avance_relativo = (items_procesados / total_items) * rango
-        else:
-            avance_relativo = rango # Si no hay items, asumimos paso completado
-        
-        total_global = base + avance_relativo
-        
-        # Tope visual estético
-        if total_global > 99: total_global = 99
-        
-        nombres_pasos = ["Descargando", "Extrayendo PDF", "Buscando Precios", "Generando Excel", "Guardando en BD"]
-        mensaje = f"{nombres_pasos[idx]} ({items_procesados}/{total_items})"
-        
-        callback(round(total_global, 1), mensaje, None)
-
-
-# CORRECCIÓN: Agregar cancel_event
-def main(cancel_event, ruta_lista=None, progress_callback=None):
-    logger.info("=== INICIO DEL FLUJO DE TASACIÓN ===")
-
-    # ------------------------------------------------------------------
-    # PASO 0: Descarga Automática (0% - 25%)
-    # ------------------------------------------------------------------
-    if ruta_lista:
-        if cancel_event.is_set(): return
-        
+        # ==============================================================================
+        # PASO 0: DESCARGA Y CAPTURA DE SESIÓN MAESTRA (0% - 20%)
+        # ==============================================================================
         logger.info(f">>> EJECUTANDO PASO 0: Descarga automática desde {ruta_lista}...")
-        if progress_callback: progress_callback(5, "Iniciando descargas...")
+        if progress_callback: progress_callback(2, "Paso 0: Autenticando y preparando descargas...")
         
-        def cb_paso0(proc, tot):
-            calcular_progreso_global(0, proc, tot, progress_callback)
+        def cb_paso0(curr, total):
+            prog = 2 + int((curr / total) * 18) # Llega hasta 20%
+            if progress_callback: progress_callback(prog, f"Paso 0: Descargando propiedades ({curr}/{total})...")
 
-        # CAMBIO: Ahora desempaquetamos la tupla (cantidad_exitos, lista_fallidos)
-        cant_exitos, lista_fallidos = paso0_hp.ejecutar(ruta_lista, cancel_event, callback_progreso=cb_paso0)
-        
-        # Lógica de Validación de Errores para la API
-        if cant_exitos == 0:
-            mensaje_error = "❌ Fallo general en descargas."
-            
-            # Analizamos por qué fallaron
-            if lista_fallidos:
-                total_fallos = len(lista_fallidos)
-                # Contamos cuántos fueron por 'Rol no encontrado'
-                roles_inexistentes = [f for f in lista_fallidos if f.get('motivo_error') == "Rol no encontrado"]
-                cant_inexistentes = len(roles_inexistentes)
+        total_exitos_descarga, fallidos_paso0, cookies_maestras = paso0_hp.ejecutar(
+            ruta_lista, cancel_event, callback_progreso=cb_paso0
+        )
 
-                if cant_inexistentes == total_fallos:
-                    # CASO 1: Todos fallaron porque el rol no existe (Error de Datos del Usuario)
-                    mensaje_error = f"❌ Error: Ninguno de los {total_fallos} roles ingresados existe en House Pricing. Verifique comuna y rol."
-                elif cant_inexistentes > 0:
-                    # CASO 2: Mezcla
-                    mensaje_error = f"❌ Fallo total: {cant_inexistentes} roles no existen y el resto falló por conexión."
-                else:
-                    # CASO 3: Error técnico (Timeout, Login, etc)
-                    motivo = lista_fallidos[0].get('motivo_error', 'Desconocido')
-                    mensaje_error = f"❌ Error técnico en descargas: {motivo}."
+        if total_exitos_descarga == 0:
+            if not cookies_maestras:
+                raise Exception("❌ [FALLO PASO 0] Error de Autenticación o Red: Cloudflare/Turnstile bloqueó la conexión o las credenciales son inválidas.")
             else:
-                # --- NUEVO: CASO 4: Archivo vacío o extensión inválida (.txt) ---
-                mensaje_error = "❌ Error técnico: Archivo no soportado o sin datos válidos."
+                raise Exception("❌ [FALLO PASO 0] Archivo vacío o roles no encontrados: No se pudo descargar ninguna propiedad válida de la lista ingresada.")
 
-            if cancel_event.is_set():
-                logger.warning("Proceso cancelado en Paso 0.")
-                return
-            else:
-                logger.error(mensaje_error)
-                # AL LANZAR ESTA EXCEPCIÓN, server.py la captura y la pone en el JSON 'message'
-                raise Exception(mensaje_error)
+        logger.success(f"✅ Paso 0 completado. {total_exitos_descarga} archivos listos en disco.")
+        if cancel_event.is_set(): return
+
+        # ==============================================================================
+        # PASO 1: EXTRACCIÓN DUAL RESILIENTE HTML/PDF (20% - 40%)
+        # ==============================================================================
+        logger.info(">>> EJECUTANDO PASO 1: Extracción técnica de datos...")
+        if progress_callback: progress_callback(20, "Paso 1: Iniciando extracción de datos (HTML/PDF)...")
+
+        def cb_paso1(curr, total):
+            prog = 20 + int((curr / total) * 20) # Llega hasta 40%
+            if progress_callback: progress_callback(prog, f"Paso 1: Extrayendo información de informes ({curr}/{total})...")
+
+        # Intento A: Vía rápida por HTML
+        json_propiedades = paso1_html_hp.procesar_lote_htmls(CARPETA_PDFS, cancel_event, callback_progreso=cb_paso1)    
         
-        if lista_fallidos and cant_exitos > 0:
-            errores_p0 = [{"rol": f.get('rol', 'Desconocido'), "paso": "Descarga PDF", "motivo": f.get('motivo_error', 'Fallo en descarga')} for f in lista_fallidos]
-            if progress_callback:
-                progress_callback(25, f"Descargas listas. {len(lista_fallidos)} fallaron.", errores_p0)
-            logger.warning(f"⚠️ Paso 0 completado con {len(lista_fallidos)} fallos.")
-        else:
-            logger.info("✅ Paso 0 completado. PDFs listos en carpeta de entrada.")
+        # Fallback B: Si no hay HTMLs, intenta con los PDFs de respaldo
+        if not json_propiedades:
+            logger.warning("⚠️ No se detectó data en HTML. Activando Fallback a lectura de PDFs...")
+            json_propiedades = paso1_pdf_hp.procesar_lote_pdfs(CARPETA_PDFS, cancel_event, callback_progreso=cb_paso1)
 
-    # ------------------------------------------------------------------
-    # PASO 1: Procesar PDFs (25% - 50%)
-    # ------------------------------------------------------------------
-    if cancel_event.is_set(): return
+        if not json_propiedades:
+            raise Exception("❌ [FALLO PASO 1] Error de Lectura: El motor no pudo extraer datos de los archivos HTML ni de los PDF. Verifica el formato de House Pricing.")
 
-    logger.info(">>> EJECUTANDO PASO 1: Extracción masiva de PDFs...")
-    
-    def cb_paso1(proc, tot):
-        calcular_progreso_global(1, proc, tot, progress_callback)
+        # --- ADUANA DE DATOS ---
+        json_propiedades_validadas = []
+        for prop in json_propiedades:
+            rol_log = prop.get("informacion_general", {}).get("rol", "S/R")
+            if prop.get("FATAL_ERROR_DATA"):
+                logger.warning(f"⛔ Aduana bloqueó el rol {rol_log}: {prop.get('motivo_error')}")
+                continue
+            json_propiedades_validadas.append(prop)
 
-    # Se pasa cancel_event y callback
-    json_propiedades = paso1_hp.procesar_lote_pdfs(CARPETA_PDFS, cancel_event, callback_progreso=cb_paso1)    
+        if not json_propiedades_validadas:
+            raise Exception("❌ [FALLO PASO 1] Validación Técnica: Se extrajeron archivos, pero ninguna propiedad contenía datos válidos o roles identificables.")
 
-    if not json_propiedades:
-        if cancel_event.is_set():
-            logger.warning("Proceso cancelado en Paso 1.")
-            return
-        else:
-            mensaje_error = "❌ No se generó ningún JSON válido en el Paso 1. Abortando."
-            logger.error(mensaje_error)
-            raise Exception(mensaje_error)
+        logger.success(f"✅ Paso 1 completado. {len(json_propiedades_validadas)} propiedades superaron la validación.")
+        if cancel_event.is_set(): return
 
-    logger.info(f"✅ Paso 1 completado. {len(json_propiedades)} propiedades extraídas.")
-    
-    with open(TEMP_JSON_PASO1, "w", encoding="utf-8") as f:
-        json.dump(json_propiedades, f, indent=4, ensure_ascii=False)
+        # ==============================================================================
+        # PASO 2: MERCADO E INYECCIÓN DE SESIÓN (40% - 80%)
+        # ==============================================================================
+        logger.info(">>> EJECUTANDO PASO 2: Búsqueda de comparables de mercado...")
+        if progress_callback: progress_callback(40, "Paso 2: Conectando con el mercado para buscar comparables...")
 
-    # ------------------------------------------------------------------
-    # PASO 2: Búsqueda Selenium (50% - 75%)
-    # ------------------------------------------------------------------
-    if cancel_event.is_set(): return
+        def cb_paso2(curr, total):
+            prog = 40 + int((curr / total) * 40) # Llega hasta 80%
+            if progress_callback: progress_callback(prog, f"Paso 2: Evaluando mercado y comparables ({curr}/{total})...")
 
-    logger.info(">>> EJECUTANDO PASO 2: Búsqueda de mercado (Selenium)...")
-    
-    def cb_paso2(proc, tot):
-        calcular_progreso_global(2, proc, tot, progress_callback)
-
-    # Pasar cancel_event y callback
-    json_enriquecido = paso2_hp.procesar_lista_propiedades(json_propiedades, cancel_event, callback_progreso=cb_paso2)
-
-    if cancel_event.is_set():
-        logger.warning("Paso 2 cancelado por usuario.")
-        return
-    
-    if not json_enriquecido:
-        mensaje_error = "❌ El Paso 2 terminó sin resultados válidos."
-        logger.error(mensaje_error)
-        raise Exception(mensaje_error)
-    
-    json_limpio = []
-    errores_p2 = []
-
-    for prop in json_enriquecido:
-        rol_actual = prop.get("informacion_general", {}).get("rol", "S/R")
-        tasa_uf = prop.get("tasa_vta_uf", 0)
-
-        if not tasa_uf or str(tasa_uf).strip() in ["0", "0.0", ""]:
-            motivo = "Propiedad sin Tasación capturada (Fallo en origen o valor 0)."
-            logger.warning(f"⛔ Aduana bloqueó el rol {rol_actual}: {motivo}")
-            errores_p2.append({"rol": rol_actual, "paso": "Validación Tasación", "motivo": motivo})
-            continue # Se descarta, NO llegará a la Base de Datos
+        json_enriquecido = paso2_hp.procesar_lista_propiedades(
+            json_propiedades_validadas, 
+            cancel_event, 
+            callback_progreso=cb_paso2,
+            cookies_sesion=cookies_maestras 
+        )
         
-        if prop.get("FATAL_ERROR_DATA"):
-            motivo = prop.get("motivo_error", "Error crítico en extracción de datos esenciales.")
-            logger.warning(f"⛔ Aduana bloqueó el rol {rol_actual}: {motivo}")
-            errores_p2.append({"rol": rol_actual, "paso": "Extracción HP", "motivo": motivo})
-            continue
+        if not json_enriquecido:
+            raise Exception("❌ [FALLO PASO 2] Error de Mercado: El proceso de scraping en House Pricing falló de manera crítica y no devolvió resultados.")
 
-        estado_hp = prop.get("house_pricing", {}).get("comparables", [])
-        if isinstance(estado_hp, str):
-            errores_p2.append({"rol": rol_actual, "paso": "Búsqueda HP", "motivo": estado_hp})
+        logger.success(f"✅ Paso 2 completado. Mercado evaluado para {len(json_enriquecido)} propiedades.")
+        if cancel_event.is_set(): return
+
+        # ==============================================================================
+        # PASO 3: REPORTE EXCEL RELACIONAL (80% - 90%)
+        # ==============================================================================
+        logger.info(">>> EJECUTANDO PASO 3: Generación de estructura Excel...")
+        if progress_callback: progress_callback(80, "Paso 3: Construyendo hojas de cálculo relacionales...")
+
+        def cb_paso3(curr, total):
+            prog = 80 + int((curr / total) * 10) # Llega hasta 90%
+            if progress_callback: progress_callback(prog, f"Paso 3: Escribiendo registros en Excel ({curr}/{total})...")
+
+        nombre_final_excel = f"Reporte_Tasacion_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
         
-        json_limpio.append(prop)
+        exito_excel = paso3_hp.generar_excel(
+            json_enriquecido, 
+            cancel_event, 
+            nombre_archivo=TEMP_EXCEL, 
+            callback_progreso=cb_paso3, 
+            crear_excel=False   
+        )
         
-    if not json_limpio:
-        mensaje_error = f"❌ Ninguna propiedad del lote superó la Aduana de Datos. motivo: {motivo}"
-        logger.error(mensaje_error)
-        raise Exception(mensaje_error)
-    
-    if errores_p2 and progress_callback:
-        progress_callback(75, f"Scraping listo. {len(json_limpio)} válidos, {len(errores_p2)} bloqueados/sin resultados.", errores_p2)
-        logger.warning(f"⚠️ Paso 2 completado con {len(errores_p2)} bloqueos o advertencias.")
-    else:
-        logger.info(f"✅ Paso 2 completado. {len(json_limpio)} propiedades perfectas listas para DB/Excel.")
-
-    with open(TEMP_JSON_FINAL, "w", encoding="utf-8") as f:
-        # ATENCIÓN: Guardamos solo la lista limpia
-        json.dump(json_limpio, f, indent=4, ensure_ascii=False)
-
-    json_enriquecido = json_limpio
-    # ------------------------------------------------------------------
-    # PASO 3: Generar Excel (75% - 100%)
-    # ------------------------------------------------------------------
-    if cancel_event.is_set(): return
-
-    logger.info(">>> EJECUTANDO PASO 3: Generación de Excel...")
-    
-    def cb_paso3(proc, tot):
-        calcular_progreso_global(3, proc, tot, progress_callback)
-
-    # Pasar cancel_event y callback
-    exito_excel = paso3_hp.generar_excel(json_enriquecido, cancel_event, TEMP_EXCEL, callback_progreso=cb_paso3)
-
-    # ------------------------------------------------------------------
-    # PASO 4: Inyección a Base de Datos (90% - 100%)
-    # ------------------------------------------------------------------
-    if cancel_event.is_set(): return
-
-    logger.info(">>> EJECUTANDO PASO 4: Inyección a Base de Datos...")
-    
-    def cb_paso4(proc, tot):
-        calcular_progreso_global(4, proc, tot, progress_callback)
-
-    # Inyectamos usando el JSON enriquecido del Paso 2
-    exito_bd = paso4_hp.insertar_datos(json_enriquecido, cancel_event, callback_progreso=cb_paso4)
-
-    # --- CORRECCIÓN PUNTO 4: VALIDACIÓN ESTRICTA Y ERROR AL FRONT ---
-    if not exito_bd:
-        mensaje_error = "❌ Error crítico: Falló la inyección en la BD (Rollback ejecutado)."
-        logger.error(mensaje_error)
-        raise Exception(mensaje_error)
-
-    logger.info("✅ Paso 4 completado.")
-    
-# Reemplaza desde "if exito_excel:" hasta el final del archivo por esto:
-
-    if exito_excel:
-        # --- CORRECCIÓN PUNTO 3: PREVENIR FALSA CANCELACIÓN EXITOSA ---
-        if cancel_event.is_set():
-            logger.warning("Proceso cancelado justo antes de finalizar.")
-            return False
-
-        logger.info(">>> FINALIZANDO: Moviendo archivos y limpieza...")
+        if not exito_excel:
+            raise Exception("❌ [FALLO PASO 3] Error de Archivo: No se pudo escribir y guardar el archivo Excel temporal en disco.")
         
-        if not os.path.exists(OUTPUT_FOLDER):
-            os.makedirs(OUTPUT_FOLDER)
+        logger.success("✅ Paso 3 completado. Archivo Excel temporal generado.")
+        if cancel_event.is_set(): return
 
-        fecha_str = datetime.now().strftime("%Y-%m-%d")
-        uuid_str = uuid.uuid4().hex[:6]
-        base_name = f"Reporte_HousePricing_{fecha_str}_{uuid_str}"
-
-        ruta_final_json = os.path.join(OUTPUT_FOLDER, f"{base_name}.json")
-        ruta_final_excel = os.path.join(OUTPUT_FOLDER, f"{base_name}.xlsx")
+        # ==============================================================================
+        # PASO 4: PERSISTENCIA MySQL (90% - 100%)
+        # ==============================================================================
+        logger.info(">>> EJECUTANDO PASO 4: Inyección de datos en MySQL...")
+        if progress_callback: progress_callback(90, "Paso 4: Sincronizando información con la base de datos...")
+        
+        def cb_paso4(curr, total):
+            prog = 90 + int((curr / total) * 10) # Llega hasta 100%
+            if progress_callback: progress_callback(prog, f"Paso 4: Guardando registros en BD ({curr}/{total})...")
 
         try:
-            if exito_excel == "SKIPPED":
-                logger.info("⏩ Se omitió la creación del Excel por configuración. Solo se guardará el JSON.")
-            elif exito_excel is True and os.path.exists(TEMP_EXCEL):
-                shutil.move(TEMP_EXCEL, ruta_final_excel)
-                logger.info(f"📂 Excel guardado en: {ruta_final_excel}")
+            exito_bd = paso4_hp.insertar_datos(
+                lista_datos=json_enriquecido, 
+                cancel_event=cancel_event, 
+                callback_progreso=cb_paso4
+            )
             
-            if os.path.exists(TEMP_JSON_FINAL):
-                import time
-                movido = False
-                for intento in range(5):
-                    try:
-                        shutil.move(TEMP_JSON_FINAL, ruta_final_json)
-                        logger.info(f"📂 JSON Raw guardado en: {ruta_final_json}")
-                        movido = True
-                        break
-                    except PermissionError:
-                        time.sleep(1)
+            if exito_bd:
+                logger.success("✅ Paso 4 completado: Datos persistidos exitosamente en MySQL.")
+            else:
+                logger.warning("⚠️ [ADVERTENCIA PASO 4]: El proceso de guardado en BD retornó 'False' o fue cancelado por el usuario.")
                 
-                if not movido:
-                    raise Exception(f"El archivo {TEMP_JSON_FINAL} está bloqueado permanentemente por otro proceso de Windows.")
+        except Exception as e_db:
+            logger.error(f"⚠️ [ERROR PASO 4]: Fallo en la inserción a BD ({str(e_db)}). El proceso continuará para garantizar la entrega del archivo Excel.")
 
-            cleanup_temp_files(cancel_event)
-
-            logger.info("🎉 === PROCESO FINALIZADO CON ÉXITO === 🎉")
-            if progress_callback: progress_callback(100, "Proceso Completado Exitosamente")
-            
-            # Bloque seguro para Linux/API (No intentar abrir GUI)
-            try:
-                if os.name == 'nt' and exito_excel is True: # Solo intentar abrir si realmente se creó
-                    os.startfile(ruta_final_excel)
-            except:
-                pass
-            
-            # --- CORRECCIÓN: Retornamos True explícitamente al servidor ---
-            return True
-
-        except Exception as e:
-            # --- CORRECCIÓN: Si falla al mover el archivo (ej: Excel lo tiene bloqueado), la API debe saberlo ---
-            mensaje_error = f"❌ Error guardando los archivos finales: {e}"
-            logger.error(mensaje_error)
-            raise Exception(mensaje_error)
-
-    else:
-        if cancel_event.is_set():
-            logger.warning("Proceso cancelado en Paso 3.")
-            return
+        # ==============================================================================
+        # CIERRE Y LIMPIEZA
+        # ==============================================================================
+        ruta_final = os.path.join(OUTPUT_FOLDER, nombre_final_excel)
+        
+        if os.path.exists(TEMP_EXCEL):
+            shutil.move(TEMP_EXCEL, ruta_final)
+            logger.info(f"📁 Reporte disponible en: {ruta_final}")
         else:
-            # --- CORRECCIÓN: La excepción del Paso 3 ahora está en el lugar correcto ---
-            mensaje_error = "❌ El Paso 3 falló generando el Excel."
-            logger.error(mensaje_error)
-            raise Exception(mensaje_error)
+            logger.warning(f"⚠️ No se encontró el archivo temporal de Excel ({TEMP_EXCEL}) para mover.")
+        
+        cleanup_temp_files(cancel_event)
+        
+        logger.info(f"🎉 === PIPELINE FINALIZADO CON ÉXITO ===")
+        if progress_callback: progress_callback(100, "¡Proceso Completado Exitosamente!")
+        
+        return True
 
-# --- CORRECCIÓN: Bloque Main restaurado a la normalidad ---
+    except Exception as e:
+        logger.error(f"❌ INTERRUPCIÓN CRÍTICA DEL PIPELINE: {str(e)}")
+        # Forzamos limpieza de temporales para no dejar basura si el programa se cae
+        cleanup_temp_files(cancel_event)
+        raise e
+
 if __name__ == "__main__":
-    if not os.path.exists(CARPETA_PDFS):
-        os.makedirs(CARPETA_PDFS)
-    
-    import threading
-    # Solo para pruebas locales de main_hp.py
-    main(threading.Event())
+    # Prueba local de ejecución
+    evento_cancelacion = threading.Event()
+    try:
+        main(evento_cancelacion, ruta_lista="propiedades.csv")
+    except Exception as error_main:
+        print(f"Ejecución detenida: {error_main}")

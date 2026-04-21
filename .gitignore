@@ -217,3 +217,8 @@ api/log.txt.txt
 *.json
 
 logs/*
+
+*.xlsx
+*.html
+*.csv
+*.png

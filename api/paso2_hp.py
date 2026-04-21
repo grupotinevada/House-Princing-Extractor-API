@@ -3,23 +3,23 @@
 #  Viaja por la pagina , ingresa los datos y extrae la data de las propiedades comparables
 #  Guarda la data en el JSON proveniente del paso 1
 ############################################################################################################################
-############################################################################################################################
-#   ACUERDATE DE EJECUTAR EL PROCESO Y MANDAR EL LOG AL CHAT DE GEMINIS PARA QUE TE EVALUE LOS ERRORES Y SI ESTA FUNCIONANDO LA LOGICA QUE CREAMOS
-############################################################################################################################
+
 
 
 #PRUEBA GITHUB ACTION DEVOPS
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
+import undetected_chromedriver as uc
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait, Select
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.action_chains import ActionChains
+from pyvirtualdisplay import Display
 from bs4 import BeautifulSoup
 import time
 import math
+import random
 import threading
-from concurrent.futures import ThreadPoolExecutor, as_completed # Para paralelismo
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from logger import get_logger, log_section, dbg
 logger = get_logger("paso2_hp", log_dir="logs", log_file="paso2_hp.log")
@@ -115,7 +115,6 @@ def parse_propiedades(html, cancel_event,fuente_actual):
             rol = card.get("data-rol")
             comuna = card.get("data-comuna")
             fecha_transaccion = card.get("data-date-trx")
-            hash_id = card.get("data-hash")
             # 2. Limpieza de datos numéricos
             m2_util = card.get("data-m2-formatted")
             m2_total = card.get("data-m2-total-formatted")
@@ -140,7 +139,6 @@ def parse_propiedades(html, cancel_event,fuente_actual):
                 "fecha_transaccion": fecha_transaccion,
                 "fecha_publicacion": fecha_publicacion,
                 "anio": anio,
-                "hash_id": hash_id,
                 "m2_util": m2_util or "0",
                 "m2_total": m2_total or "0",
                 "dormitorios": dormitorios,
@@ -165,6 +163,8 @@ def extraer_direccion_y_link(raw_name, raw_display_name):
     # Validación básica por si viene None
     if not raw_name:
         return "Sin dirección", None
+
+    
 
     raw_name_clean = raw_name.strip()
     
@@ -225,8 +225,7 @@ def aplicar_filtro_ofertas_publicadas(driver, wait):
 
 def _buscar_propiedad_individual(driver, wait, comuna_nombre, tipo_target, rol_target, cancel_event):
     from selenium.common.exceptions import TimeoutException
-    import re
-
+    
     logger.info(f"🔎 Buscando: {comuna_nombre} | Rol: {rol_target} | Tipo: {tipo_target}")
     
     datos_retorno = {
@@ -247,34 +246,37 @@ def _buscar_propiedad_individual(driver, wait, comuna_nombre, tipo_target, rol_t
             wait.until(EC.visibility_of_element_located((By.ID, "rol-container")))
         except TimeoutException:
             logger.warning(f"   ⚠️ Timeout esperando formulario para {rol_target}. Solicitando reintento...")
-            # --- NUEVA SEMÁNTICA: Falla de carga de UI Inicial ---
-            raise Exception("Timeout: House Pricing no cargó el formulario de búsqueda inicial. El sitio está inestable o lento.")
+            raise
+        # time.sleep(1) # Pequeña pausa eliminada, Selenium maneja el ritmo
 
         logger.info("   🖱️ Seleccionando comuna...")
         select_comuna = driver.find_element(By.ID, "select-comuna")
         driver.execute_script("arguments[0].style.display = 'block';", select_comuna)
         Select(select_comuna).select_by_visible_text(comuna_nombre)
         driver.execute_script("arguments[0].dispatchEvent(new Event('change'));", select_comuna)
-        
+        # time.sleep(1)
+
         logger.info(f"   ⌨️ Ingresando Rol {rol_target}...")
         input_rol = driver.find_element(By.ID, "inputRol")
         input_rol.clear()
         input_rol.send_keys(rol_target)
+        # time.sleep(1)
         
         select_prop_type = wait.until(EC.element_to_be_clickable((By.ID, "tipo_propiedad")))
         Select(select_prop_type).select_by_visible_text(tipo_target)
         
         # Esperamos a que la página esté "tranquila" antes de buscar
         wait.until(lambda d: d.execute_script("return document.readyState === 'complete'"))
-        time.sleep(5)
-        logger.debug("   ⏳ Esperando 5 segundos la recarga de filtro...")
+
         
         # 1. Capturar contenedor viejo
         lista_vieja = None
         try:
+            # Usamos ID 'property_list' 
             lista_vieja = driver.find_element(By.ID, "property_list")
             logger.debug(f"   👀 Contenedor viejo detectado (ID: {lista_vieja.id}).")
         except Exception:
+            # Si por alguna razón no existe al inicio, esperamos que aparezca el nuevo directamente
             logger.debug("   👀 No se detectó contenedor viejo (limpio).")
             pass 
 
@@ -285,33 +287,41 @@ def _buscar_propiedad_individual(driver, wait, comuna_nombre, tipo_target, rol_t
 
         # 3. Sincronización: Esperar el "Parpadeo" del contenedor
         try:
+            # A) Si existía la lista vieja, esperar a que MUERA (se desvincule del DOM)
             if lista_vieja:
                 wait.until(EC.staleness_of(lista_vieja))
                 logger.debug("   🔄 Contenedor antiguo destruido (DOM Refresh iniciado).")
             
+            # B) Esperar a que NAZCA la nueva lista (el servidor respondió)
+            # Esto ocurrirá haya 0 o 100 resultados.
             nueva_lista = wait.until(EC.presence_of_element_located((By.ID, "property_list")))
             logger.debug("   🆕 Nuevo contenedor 'property_list' cargado exitosamente.")
 
-            # 4. VERIFICACIÓN RÁPIDA DE RESULTADOS
+            # 4. VERIFICACIÓN RÁPIDA DE RESULTADOS (Evitar Timeout si es 0)
+            # En tu imagen se ve el atributo data-total-count="300"
             try:
                 total_count = nueva_lista.get_attribute("data-total-count")
                 if total_count and int(total_count) == 0:
                     logger.warning(f"   ⚠️ La búsqueda terminó correctamente pero hay 0 resultados (Data del sitio).")
-                    # --- NUEVA SEMÁNTICA: Búsqueda exitosa pero sin datos ---
-                    datos_retorno["mensaje"] = "Búsqueda exitosa, pero House Pricing no tiene propiedades comparables ni ofertas publicadas para este sector."
+                    datos_retorno["mensaje"] = "Sin resultados (Fuente oficial)"
+                    # Intentamos sacar el centroide igual por si acaso el mapa se movió
+                    # pero no entramos a buscar cards
                 else:
                     logger.info(f"   🔢 Resultados encontrados según atributo: {total_count}")
             except:
-                pass 
+                pass # Si no tiene el atributo, seguimos al método clásico
 
         except TimeoutException:
             logger.error("   ❌ Timeout esperando que se refresque #property_list.")
-            # --- NUEVA SEMÁNTICA: Timeout de Resultados ---
-            raise Exception("Error de Scraper: House Pricing tardó demasiado en responder a la búsqueda o cambió la estructura de resultados.")
+            datos_retorno["mensaje"] = "Error de carga (Timeout)"
+            raise   
 
         # --- [EXTRACCIÓN DE CENTROIDE Y DATOS] ---
+        # Solo intentamos buscar .hpid si sabemos que hay algo o si falló la lectura del count
         if datos_retorno["mensaje"] == "OK":
             try:
+                # Damos un respiro mínimo para que el renderizado interno termine
+                # (A veces el div padre está, pero los hijos tardan milisegundos en pintar)
                 time.sleep(2) 
                 
                 ne_lat = driver.find_element(By.NAME, "ne_lat").get_attribute("value")
@@ -327,6 +337,7 @@ def _buscar_propiedad_individual(driver, wait, comuna_nombre, tipo_target, rol_t
                 logger.warning(f"   ⚠️ No se pudieron extraer coordenadas del mapa para {rol_target}")
 
             # --- [BLOQUE ITERAR FUENTES] ---
+            # Solo entramos aquí si NO detectamos 0 resultados arriba
             lista_total = []
             fuentes_a_extraer = ["Compraventas", "Ofertas"] 
             
@@ -336,33 +347,38 @@ def _buscar_propiedad_individual(driver, wait, comuna_nombre, tipo_target, rol_t
                 logger.info(f"   --- 🔄 Cambiando a fuente: {fuente_val} ---")
                 
                 try:
+                    # 1. Seleccionar la fuente (Esto TAMBIÉN refresca la lista, ojo)
                     select_elem = wait.until(EC.element_to_be_clickable((By.ID, "fuente")))
                     Select(select_elem).select_by_value(fuente_val)
                     
+                    # Esperamos recarga
                     logger.debug(f"     ⏳ Esperando recarga de filtro {fuente_val}...")
                     time.sleep(3) 
 
+                    # 2. Re-aplicar orden
                     try:
                         sort_select = driver.find_element(By.ID, "sort-selector")
                         Select(sort_select).select_by_value("year_desc")
                         time.sleep(2)
                         logger.debug("     🔽 Orden aplicado: Año descendente")
                     except:
+                        logger.debug("     ℹ️ No se encontró selector de orden.")
                         pass 
 
                     if fuente_val == "Ofertas":
-                        aplicar_filtro_ofertas_publicadas(driver, wait)
+                        aplicar_filtro_ofertas_publicadas(driver, wait) # Solo para Ofertas, aplicamos el filtro extra de "Publicado = Sí"
 
+                    #3. Parsear (Extrae todas las cards cargadas en la web, ej: 50 propiedades)
                     propiedades_raw = parse_propiedades(driver.page_source, cancel_event, fuente_val)
                     
                     # --- FILTRO ESTRICTO DE LINKS ---
                     if propiedades_raw and fuente_val == "Ofertas":
                         con_link = [p for p in propiedades_raw if p.get("link_publicacion") and p["link_publicacion"] != "No hay dato, Ver publicacion"]
                         
+                        # Si es Oferta, trajo cards, pero NINGUNA tiene link -> DOM Incompleto
                         if len(con_link) == 0:
                             logger.error(f"     ❌ [DOM INCOMPLETO] {len(propiedades_raw)} cards en Ofertas pero NINGUNA tiene link. Forzando recarga.")
-                            # --- NUEVA SEMÁNTICA: Dom incompleto accionable ---
-                            raise Exception("DOM_INCOMPLETO: House Pricing cargó resultados incompletos (Ofertas sin enlaces a portales). Se omitió para mantener la calidad de datos.")
+                            raise Exception("DOM_INCOMPLETO_LINK_FALTANTE")
                         
                         descartadas = len(propiedades_raw) - len(con_link)
                         if descartadas > 0:
@@ -371,113 +387,68 @@ def _buscar_propiedad_individual(driver, wait, comuna_nombre, tipo_target, rol_t
                         propiedades_raw = con_link
                     # --------------------------------------------------
 
+                    # 4. Calcular distancias (Se aplica solo a las sobrevivientes válidas)
                     if datos_retorno["lat_centro"]:
+                        logger.debug(f"     📐 Calculando distancias para {len(propiedades_raw)} propiedades válidas...")
                         for p in propiedades_raw:
                             p['distancia_metros'] = calcular_distancia(
                                 datos_retorno["lat_centro"], datos_retorno["lng_centro"], 
                                 p['lat'], p['lng']
                             )
+                        # Ordenamos de la más cercana a la más lejana
                         propiedades_raw = sorted(propiedades_raw, key=lambda x: x.get('distancia_metros', 999999))
                     
+                    # 5. Cortar las mejores 10 (Garantiza 10 propiedades SÍ O SÍ con link, si hay disponibles)
                     mejores_10 = propiedades_raw[:10]
-
-                    try:
-                        csrf_token = driver.find_element(By.NAME, "csrfmiddlewaretoken").get_attribute("value")
-                        search_buc = driver.find_element(By.NAME, "buc").get_attribute("value")
-                        
-                        for p in mejores_10:
-                            if not p.get("hash_id"):
-                                p["estacionamientos"] = 0
-                                p["bodegas"] = 0
-                                continue
-                                
-                            html_pdp = driver.execute_async_script("""
-                                var done = arguments[arguments.length - 1];
-                                var formData = new FormData();
-                                formData.append('csrfmiddlewaretoken', arguments[0]);
-                                formData.append('search_buc', arguments[1]);
-                                formData.append('fuente', arguments[2]);
-                                formData.append('num', '50');
-                                formData.append('num_total', '300');
-                                formData.append('num_des', '0');
-                                formData.append('map_property_id', arguments[3]);
-
-                                fetch('/buscar-propiedades/mapa-rol-pdp/', {
-                                    method: 'POST',
-                                    body: formData,
-                                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                                })
-                                .then(r => r.text())
-                                .then(text => done(text))
-                                .catch(err => done(""));
-                            """, csrf_token, search_buc, fuente_val, p["hash_id"])
-                            
-                            p["estacionamientos"] = 0
-                            p["bodegas"] = 0
-                            
-                            if html_pdp:
-                                soup_pdp = BeautifulSoup(html_pdp, "html.parser")
-                                
-                                span_est = soup_pdp.find("span", string="Estacionamientos")
-                                if span_est:
-                                    val_est = span_est.find_next_sibling("span").text.strip()
-                                    match = re.search(r'\d+', val_est)
-                                    if match: p["estacionamientos"] = int(match.group())
-                                        
-                                span_bod = soup_pdp.find("span", string="Bodegas")
-                                if span_bod:
-                                    val_bod = span_bod.find_next_sibling("span").text.strip()
-                                    match = re.search(r'\d+', val_bod)
-                                    if match: p["bodegas"] = int(match.group())
-                    except Exception as e:
-                        logger.warning(f"     ⚠️ Error extrayendo detalles adicionales (Est/Bod): {e}")
                     lista_total.extend(mejores_10)
                     
-                    logger.success(f"     📥 Se agregaron {len(mejores_10)} propiedades válidas de {fuente_val}")
+                    logger.success(f"     📥 Se agregaron {len(mejores_10)} propiedades válidas (Top 10 más cercanas) de {fuente_val}")
 
                 except Exception as e:
+                    # --- NUEVO MANEJO DE ERROR ---
+                    # Si es nuestro error de DOM incompleto, lo lanzamos hacia arriba para forzar el reintento del rol.
                     if "DOM_INCOMPLETO" in str(e):
                         raise
-                    logger.error(f"     ❌ Error procesando fuente {fuente_val}: {e}")
+                    # Si es otro error menor, lo logueamos y seguimos con la otra fuente.
+                    logger.error(f"     ❌ Error procesando fuente {fuente_val}: {e}", exc_info=True)
             
             datos_retorno["resultados"] = lista_total
             
             if not datos_retorno["resultados"] and datos_retorno["mensaje"] == "OK":
-                datos_retorno["mensaje"] = "Búsqueda exitosa, pero House Pricing no tiene propiedades comparables ni ofertas publicadas para este sector."
+                datos_retorno["mensaje"] = "Sin resultados en ninguna fuente"
                 logger.warning("   ⚠️ Finalizado sin resultados en Compraventas ni Ofertas.")
-    
     except TimeoutException:
         raise
     except Exception as e:
-        logger.error(f"Error técnico inesperado: {str(e)}")
-        datos_retorno["mensaje"] = f"Error técnico de validación: {str(e)}"
+        logger.error(...)
+        datos_retorno["mensaje"] = f"Error técnico: {str(e)}"
+
     
     return datos_retorno
 
 # ==============================================================================
 # NUEVO: WORKER ESTANDARIZADO (CADA WORKER TIENE SU NAVEGADOR)
 # ==============================================================================
-def procesar_lote_worker(id_worker, sublista_propiedades, cancel_event, callback_progreso=None):
+def procesar_lote_worker(id_worker, sublista_propiedades, cancel_event, callback_progreso=None, cookies_sesion=None):
+    """
+    Función Worker que se ejecuta en su propio hilo.
+    Abre su navegador independiente, se loguea y procesa su sublista.
+    """
     logger.info(f"👷 [Worker-{id_worker}] Iniciando sesión Selenium...")
     
-    options = Options()
-    options.add_argument("--headless=new")
-    options.add_argument("--disable-gpu")
-    options.add_argument("--disable-extensions")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-blink-features=AutomationControlled")
+    # --- NUEVO: MONITOR VIRTUAL ---
+    display = None
+    if os.name != 'nt':
+        display = Display(visible=0, size=(1920, 1080))
+        display.start()
+
+    options = uc.ChromeOptions()
     options.add_argument("--window-size=1920,1080")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--disable-gpu")
     
-    prefs = {
-        "profile.managed_default_content_settings.images": 2, 
-        "profile.default_content_setting_values.notifications": 2, 
-        "profile.managed_default_content_settings.stylesheets": 2, 
-    }
-    options.add_experimental_option("prefs", prefs)
-    options.page_load_strategy = 'eager'
-    
-    driver = webdriver.Chrome(options=options)
+    driver = uc.Chrome(options=options)
     wait = WebDriverWait(driver, 20)
     
     lista_worker_enriquecida = []
@@ -486,16 +457,52 @@ def procesar_lote_worker(id_worker, sublista_propiedades, cancel_event, callback
         # 1. LOGIN
         logger.info(f"🔐 [Worker-{id_worker}] Logueando en HousePricing...")
         if cancel_event.is_set(): 
-            driver.quit(); return []
+            driver.quit()
+            if display: display.stop()
+            return []
 
         try:
-            driver.get(LOGIN_URL)
-            wait.until(EC.presence_of_element_located((By.ID, "id_email"))).send_keys(EMAIL)
-            driver.find_element(By.ID, "id_password").send_keys(PASSWORD)
-            driver.execute_script("arguments[0].click();", driver.find_element(By.ID, "hp-login-btn"))
-            wait.until(lambda d: "/login" not in d.current_url)
-            logger.success(f"✅ [Worker-{id_worker}] Login exitoso.")
-            time.sleep(2)
+            if cookies_sesion:
+                # --- INYECCIÓN DE SESIÓN MAESTRA ---
+                driver.get("https://www.housepricing.cl/") # Requisito de Selenium: visitar el dominio primero
+                for name, value in cookies_sesion.items():
+                    driver.add_cookie({'name': name, 'value': value})
+                logger.success(f"✅ [Worker-{id_worker}] Sesión inyectada. Omitiendo login biométrico.")
+            else:
+                # --- LOGIN BIOMÉTRICO DE RESPALDO ---
+                driver.get(LOGIN_URL)
+                
+                # Helper local para simular tipeo humano
+                def human_typing(element, text):
+                    for char in text:
+                        element.send_keys(char)
+                        time.sleep(random.uniform(0.05, 0.15))
+
+                wait.until(EC.presence_of_element_located((By.NAME, "email")))
+                time.sleep(random.uniform(1.5, 3.0))
+
+                email_input = driver.find_element(By.NAME, "email")
+                ActionChains(driver).move_to_element(email_input).click().perform()
+                time.sleep(random.uniform(0.2, 0.6))
+                human_typing(email_input, EMAIL)
+
+                time.sleep(random.uniform(0.5, 1.2))
+
+                pass_input = driver.find_element(By.NAME, "password")
+                ActionChains(driver).move_to_element(pass_input).click().perform()
+                time.sleep(random.uniform(0.2, 0.6))
+                human_typing(pass_input, PASSWORD)
+
+                logger.debug(f"   ➡️ [Worker-{id_worker}] Credenciales escritas. Esperando entropía Turnstile...")
+                time.sleep(random.uniform(3.5, 5.0)) 
+                
+                submit_btn = driver.find_element(By.XPATH, "/html/body/section/div/div/section/div/div/div/div[2]/form/div[4]/button")
+                ActionChains(driver).move_to_element(submit_btn).pause(random.uniform(0.5, 1.0)).click().perform()
+
+                wait.until(lambda d: "login" not in d.current_url.lower())
+                logger.success(f"✅ [Worker-{id_worker}] Login exitoso.")
+                time.sleep(2)
+            
         except Exception as e_login:
             logger.error(f"❌ [Worker-{id_worker}] Fallo de Login en Selenium: {e_login}")
             # --- NUEVA SEMÁNTICA: Fallo de Login propaga a toda la sublista ---
@@ -535,11 +542,12 @@ def procesar_lote_worker(id_worker, sublista_propiedades, cancel_event, callback
             for intento in range(MAX_INTENTOS):
                 if cancel_event.is_set(): break
                 try:
+                    # Intento de búsqueda
                     resultado_hp = _buscar_propiedad_individual(driver, wait, comuna, tipo, rol, cancel_event)
                     mensaje = resultado_hp.get("mensaje", "")
                     
-                    if "Error" in mensaje or "Timeout" in mensaje or "DOM_INCOMPLETO" in mensaje:
-                        raise Exception(mensaje) 
+                    if "Error" in mensaje or "Timeout" in mensaje:
+                        raise Exception(mensaje) # Forzamos el salto al 'except' para reintentar
                     
                     if "Sin resultados" in mensaje:
                         exito_rol = True
@@ -550,29 +558,30 @@ def procesar_lote_worker(id_worker, sublista_propiedades, cancel_event, callback
                     exito_rol = True
                     break
 
+                
                 except Exception as e:
+                    # Capturamos TimeoutException y otros errores de red
                     if intento < MAX_INTENTOS - 1:
-                        logger.warning(f"🔄 [Worker-{id_worker}] Fallo intento {intento+1}/{MAX_INTENTOS} para {rol}. Reintentando en 5s... (Motivo: {e})")
-                        time.sleep(3) 
+                        logger.warning(f"🔄 [Worker-{id_worker}] Fallo intento {intento+1}/{MAX_INTENTOS} para {rol}. Reintentando en 5s... (Error: {e})")
+                        time.sleep(3) # Espera de enfriamiento
                         try: 
-                            driver.refresh() 
+                            driver.refresh() # Refrescar por si acaso
                             time.sleep(2)
                         except: 
                             pass
                     else:
                         logger.error(f"💀 [Worker-{id_worker}] Fallo definitivo para {rol} tras {MAX_INTENTOS} intentos. Motivo final: {e}")
-                        # --- NUEVA SEMÁNTICA: Pasamos el mensaje detallado final ---
-                        resultado_hp["mensaje"] = str(e)
+                        resultado_hp["mensaje"] = f"Error Técnico Persistente: {str(e)}"
                         exito_rol = False
-            
             if not exito_rol:
+                # Inyectamos esta bandera para que main_hp.py la intercepte y lo saque de la BD
                 item["FATAL_ERROR_DATA"] = True
                 item["motivo_error"] = resultado_hp["mensaje"]
                 logger.warning(f"🚫 [Worker-{id_worker}] Rol {rol} marcado con FATAL_ERROR_DATA. Será excluido de la BD.")
 
             valor_comparables = resultado_hp.get("resultados", [])
             if not valor_comparables:
-                valor_comparables = resultado_hp.get("mensaje", "Búsqueda exitosa, pero sin resultados.")
+                valor_comparables = resultado_hp.get("mensaje", "Sin resultados")
 
             item["house_pricing"] = {
                 "centro_mapa": {
@@ -594,6 +603,13 @@ def procesar_lote_worker(id_worker, sublista_propiedades, cancel_event, callback
             driver.quit()
         except:
             pass
+            
+        if display:
+            try:
+                display.stop()
+            except:
+                pass
+                
         logger.info(f"👋 [Worker-{id_worker}] Sesión cerrada.")
 
     return lista_worker_enriquecida
@@ -602,7 +618,7 @@ def procesar_lote_worker(id_worker, sublista_propiedades, cancel_event, callback
 # ORQUESTADOR PRINCIPAL (ESTANDARIZADO CON PASO 0)
 # ==============================================================================
 # Modificación: Agregar callback_progreso=None
-def procesar_lista_propiedades(lista_propiedades, cancel_event, callback_progreso=None):
+def procesar_lista_propiedades(lista_propiedades, cancel_event, callback_progreso=None, cookies_sesion=None):
     """
     Orquestador que divide la lista y lanza workers en paralelo.
     """
@@ -630,8 +646,8 @@ def procesar_lista_propiedades(lista_propiedades, cancel_event, callback_progres
     with ThreadPoolExecutor(max_workers=WORKERS) as executor:
         futures = []
         for i, chunk in enumerate(chunks):
-            # Pasamos la función incrementar_progreso a cada worker
-            futures.append(executor.submit(procesar_lote_worker, i+1, chunk, cancel_event, incrementar_progreso))
+            # Pasamos la función incrementar_progreso y cookies_sesion a cada worker
+            futures.append(executor.submit(procesar_lote_worker, i+1, chunk, cancel_event, incrementar_progreso, cookies_sesion))
         
         # Recolección de resultados
         for future in as_completed(futures):
