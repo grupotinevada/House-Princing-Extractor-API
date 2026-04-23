@@ -28,7 +28,7 @@ def cleanup_temp_files(cancel_event):
         logger.info("ℹ️ Limpieza de archivos desactivada (modo debug).")
         return
 
-    archivos_a_eliminar = [TEMP_JSON_PASO1, TEMP_EXCEL]
+    archivos_a_eliminar = [TEMP_JSON_PASO1, TEMP_EXCEL, CARPETA_PDFS]
     logger.info("🧹 Ejecutando limpieza de archivos temporales...")
 
     for archivo in archivos_a_eliminar:

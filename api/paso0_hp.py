@@ -21,7 +21,7 @@ from pyvirtualdisplay import Display
 
 from dotenv import load_dotenv
 from logger import get_logger
-from .pasotasacion import obtener_tasacion
+from pasotasacion import obtener_tasacion
 
 # Configuración
 logger = get_logger("paso0_hp", log_dir="logs", log_file="paso0.log")
@@ -104,9 +104,10 @@ def obtener_cookies_selenium(email, password):
     # En Windows esto podría dar error, está pensado para el servidor Linux
     display = None
     if os.name != 'nt': # Solo levanta Xvfb si no estamos en Windows
-        display = Display(visible=0, size=(1920, 1080))
+        display = Display(visible=0, size=(1920, 1080), color_depth=24)
         display.start()
     
+    os.system("pkill -9 -f 'chrome|chromedriver' > /dev/null 2>&1")
     options = uc.ChromeOptions()
     options.add_argument("--window-size=1920,1080")
     
@@ -116,7 +117,11 @@ def obtener_cookies_selenium(email, password):
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
-    
+    options.add_argument("--disable-blink-features=AutomationControlled")
+    options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    options.add_experimental_option('useAutomationExtension', False)
+    options.page_load_strategy = 'eager'
+
     cookies_dict = {}
     driver = None
     
