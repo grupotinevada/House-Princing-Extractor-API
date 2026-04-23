@@ -14,6 +14,7 @@ from concurrent.futures import ThreadPoolExecutor
 import undetected_chromedriver as uc
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
+from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
 from pyvirtualdisplay import Display
@@ -131,7 +132,16 @@ def obtener_cookies_selenium(email, password):
             time.sleep(random.uniform(0.05, 0.15))
             
     try:
-        driver = uc.Chrome(options=options)
+        ruta_driver_exacto = ChromeDriverManager().install()
+        
+        logger.debug(f"   ⚙️ Usando ChromeDriver en: {ruta_driver_exacto}")
+
+        # 2. Le decimos a undetected_chromedriver que use ESE driver específicamente
+        driver = uc.Chrome(
+            options=options,
+            driver_executable_path=ruta_driver_exacto
+        )
+        
         driver.get(URL_LOGIN)
         
         logger.debug("   ➡️ Esperando formulario de login...")
@@ -170,7 +180,9 @@ def obtener_cookies_selenium(email, password):
             cookies_dict[cookie['name']] = cookie['value']
             
     except Exception as e:
-        logger.error(f"❌ Error en el Abrepuertas Selenium: {e}")
+        error_msg = str(e)
+        logger.error(f"❌ Error en el Abrepuertas Selenium: {error_msg}")
+        return {}, error_msg
     finally:
         if driver:
             driver.quit() 
@@ -179,7 +191,7 @@ def obtener_cookies_selenium(email, password):
             display.stop() # Importante apagar el monitor virtual
             logger.debug("   🧹 Monitor virtual apagado.")
             
-    return cookies_dict
+    return cookies_dict, None
 
 # ==============================================================================
 # 3. LÓGICA DE DESCARGA VIA REQUESTS 
@@ -380,7 +392,7 @@ class HousePricingClient:
             raise Exception("Tiempo de espera de red agotado. Los servidores de House Pricing están lentos o no responden.")
         except requests.exceptions.RequestException as e:
             logger.warning(f"   🔌 [Worker-{self.worker_id}] Falla de conexión HTTP: {e}")
-            raise Exception("Error de conexión de red con los servidores de House Pricing.")
+            raise Exception(f"Error de conexión HTTP: {str(e)}")
         except Exception as e:
             logger.error(f"   ❌ [Worker-{self.worker_id}] Error inesperado en requests: {e}")
             raise
@@ -413,8 +425,10 @@ def procesar_lote_worker(id_worker, sublista_propiedades, cancel_event, cookies_
                 if resultado is True:
                     exitos += 1
                     exito_item = True
+                elif resultado is False:
+                    raise Exception("Descarga interrumpida: Cancelación solicitada por el usuario durante el polling.")
                 else:
-                    raise Exception("Fallo genérico durante el intento inicial de descarga.")
+                    raise Exception(f"Respuesta inesperada del método de descarga: {resultado}")
             
             except Exception as error_inicial:
                 motivo_fallo = str(error_inicial)
@@ -435,8 +449,10 @@ def procesar_lote_worker(id_worker, sublista_propiedades, cancel_event, cookies_
                         elif resultado == "ROL_NOT_FOUND":
                             motivo_fallo = "El rol ingresado no existe en los registros de House Pricing para esta comuna."
                             break
+                        elif resultado is False:
+                            raise Exception("Reintento interrumpido: Cancelación solicitada por el usuario.")
                         else:
-                            raise Exception("Fallo genérico en reintento.")
+                            raise Exception(f"Fallo en reintento. Respuesta inesperada: {resultado}")
                     except Exception as error_reintento:
                         motivo_fallo = str(error_reintento)
             
@@ -459,13 +475,17 @@ def orquestador_descargas(lista_propiedades, cancel_event, callback_progreso=Non
     total = len(lista_propiedades)
     logger.info(f"🚀 Iniciando ciclo de descargas PARALELO para {total} propiedades. WORKERS={WORKERS}")
 
-    cookies_auth = obtener_cookies_selenium(EMAIL_HP, PASS_HP)
+    cookies_auth, error_selenium = obtener_cookies_selenium(EMAIL_HP, PASS_HP)
+    
     if not cookies_auth or "sessionid" not in cookies_auth:
-        logger.error("❌ Fallo crítico: No se pudieron obtener las cookies de sesión con Selenium.")
+        detalle_error = error_selenium if error_selenium else "No se detectó cookie sessionid. Posible bloqueo o credenciales inválidas."
+        logger.error(f"❌ Fallo crítico de inicialización. Detalle técnico: {detalle_error}")
+        
         fallidos = []
         for p in lista_propiedades:
-            p['motivo_error'] = "Fallo de Login: Cloudflare bloqueó el acceso inicial (Turnstile)."
+            p['motivo_error'] = f"Fallo en Selenium/Abrepuertas: {detalle_error}"
             fallidos.append(p)
+            
         # --- MODIFICADO: Agregamos None al final ---
         return 0, fallidos, None
 

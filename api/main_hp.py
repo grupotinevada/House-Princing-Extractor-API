@@ -73,7 +73,12 @@ def main(cancel_event, ruta_lista="propiedades.csv", progress_callback=None, par
 
         if total_exitos_descarga == 0:
             if not cookies_maestras:
-                raise Exception("❌ [FALLO PASO 0] Error de Autenticación o Red: Cloudflare/Turnstile bloqueó la conexión o las credenciales son inválidas.")
+                # Extraemos el error real (ej. problemas de Chrome, driver, etc.) que viene desde el Paso 0
+                motivo_real = "Error desconocido de inicialización en Paso 0."
+                if fallidos_paso0 and len(fallidos_paso0) > 0 and 'motivo_error' in fallidos_paso0[0]:
+                    motivo_real = fallidos_paso0[0]['motivo_error']
+                
+                raise Exception(f"❌ [FALLO PASO 0] {motivo_real}")
             else:
                 raise Exception("❌ [FALLO PASO 0] Archivo vacío o roles no encontrados: No se pudo descargar ninguna propiedad válida de la lista ingresada.")
 
